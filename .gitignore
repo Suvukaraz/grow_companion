@@ -1,0 +1,26 @@
+*.iml
+.gradle
+/local.properties
+.DS_Store
+/build
+/app/build
+/captures
+.externalNativeBuild
+.cxx
+
+# Android Studio
+.idea/
+*.hprof
+
+# Kotlin and Gradle generated files
+.kotlin/
+build/
+out/
+
+# Local signing and environment files
+*.jks
+*.keystore
+secrets.properties
+
+# Firebase and Google services configuration
+google-services.json
