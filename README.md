@@ -1,7 +1,7 @@
 # Grow Companion
 
 Grow Companion is a privacy-friendly Android app for organizing fertilizers,
-recipes, seeds, and plant growth timelines in one place. It is designed for
+stock solutions, seeds, and plant growth timelines in one place. It is designed for
 growers who want practical records without relying on an online account or
 cloud service.
 
