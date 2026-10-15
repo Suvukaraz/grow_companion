@@ -1,5 +1,6 @@
 package com.example.fertilizerapp
 
+import com.example.fertilizerapp.BuildConfig
 import android.graphics.Color as AndroidColor
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -12,7 +13,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -23,13 +23,15 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.fertilizerapp.ui.fertilizer.FertilizerTab
 import com.example.fertilizerapp.ui.plants.TimeCalculationTab
 import com.example.fertilizerapp.ui.recipe.RecipeTab
 import com.example.fertilizerapp.ui.seeds.SamenTab
-import com.example.fertilizerapp.ui.settings.BackupRestoreDialog
+import com.example.fertilizerapp.ui.settings.SettingsDialog
 import com.example.fertilizerapp.ui.splash.TimerSplashScreen
 import com.example.fertilizerapp.ui.theme.FertilizerAppTheme
 import com.example.fertilizerapp.viewmodel.AppViewModel
@@ -66,14 +68,14 @@ private data class TabItem(
 
 private val fullTabs = listOf(
     TabItem("Dünger", Icons.Default.Eco),
-    TabItem("Rezepte", Icons.AutoMirrored.Filled.MenuBook),
+    TabItem("Nährlösungen", Icons.Default.Science),
     TabItem("Zeiten", Icons.Default.Schedule),
-    TabItem("Samen", Icons.Default.Grass)
+    TabItem("SamenDB", Icons.Default.Spa)
 )
 
 private val timerTabs = listOf(
     TabItem("Zeiten", Icons.Default.Schedule),
-    TabItem("Samen", Icons.Default.Grass)
+    TabItem("SamenDB", Icons.Default.Spa)
 )
 
 // --- MAIN SCREEN ---
@@ -97,7 +99,7 @@ fun MainScreen(viewModel: AppViewModel = viewModel()) {
 private fun FullFlavorScreen(viewModel: AppViewModel) {
     val pagerState = rememberPagerState(pageCount = { fullTabs.size })
     val scope = rememberCoroutineScope()
-    var showBackupRestore by remember { mutableStateOf(false) }
+    var showSettings by remember { mutableStateOf(false) }
     var showInfo by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -125,10 +127,10 @@ private fun FullFlavorScreen(viewModel: AppViewModel) {
                     }
                 },
                 actions = {
-                    IconButton(onClick = { showBackupRestore = true }) {
+                    IconButton(onClick = { showSettings = true }) {
                         Icon(
                             Icons.Default.Settings,
-                            contentDescription = "Backup & Restore",
+                            contentDescription = "Einstellungen",
                             tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
@@ -166,14 +168,18 @@ private fun FullFlavorScreen(viewModel: AppViewModel) {
                         onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
                         text = {
                             Text(
-                                tab.title,
+                                text = tab.title,
                                 fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                                color = animatedColor
+                                color = animatedColor,
+                                maxLines = 1,
+                                softWrap = false,
+                                overflow = TextOverflow.Ellipsis,
+                                style = MaterialTheme.typography.labelSmall
                             )
                         },
                         icon = {
                             Icon(
-                                tab.icon,
+                                imageVector = tab.icon,
                                 contentDescription = tab.title,
                                 tint = animatedColor,
                                 modifier = Modifier.size(20.dp)
@@ -198,8 +204,8 @@ private fun FullFlavorScreen(viewModel: AppViewModel) {
     }
 
     // Dialogs
-    if (showBackupRestore) {
-        BackupRestoreDialog(viewModel) { showBackupRestore = false }
+    if (showSettings) {
+        SettingsDialog(viewModel) { showSettings = false }
     }
     if (showInfo) {
         InfoDialog(onDismiss = { showInfo = false })
@@ -227,10 +233,18 @@ private fun TimerFlavorScreen(viewModel: AppViewModel) {
                         Tab(
                             selected = selected,
                             onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
-                            text = { Text(tab.title) },
+                            text = {
+                                Text(
+                                    text = tab.title,
+                                    maxLines = 1,
+                                    softWrap = false,
+                                    overflow = TextOverflow.Ellipsis,
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            },
                             icon = {
                                 Icon(
-                                    tab.icon,
+                                    imageVector = tab.icon,
                                     contentDescription = tab.title,
                                     modifier = Modifier.size(20.dp)
                                 )

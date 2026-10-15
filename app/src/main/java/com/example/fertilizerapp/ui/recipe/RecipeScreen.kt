@@ -42,7 +42,7 @@ fun RecipeTab(viewModel: AppViewModel) {
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Rezept hinzufügen")
+                Icon(Icons.Default.Add, contentDescription = "Nährlösung hinzufügen")
             }
         },
         contentWindowInsets = WindowInsets(0, 0, 0, 0)
@@ -57,8 +57,8 @@ fun RecipeTab(viewModel: AppViewModel) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     EmptyState(
                         icon = Icons.AutoMirrored.Filled.MenuBook,
-                        title = "Keine Rezepte",
-                        subtitle = "Tippe auf + um ein neues Rezept zu erstellen."
+                        title = "Keine Nährlösungen",
+                        subtitle = "Tippe auf + um eine neue Nährlösung zu erstellen."
                     )
                 }
             } else {

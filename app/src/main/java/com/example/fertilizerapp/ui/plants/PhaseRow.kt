@@ -10,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -28,12 +29,13 @@ fun PhaseRow(
     ph: ObjectPhase,
     allNames: List<String>,
     onUp: (ObjectPhase) -> Unit,
-    onDel: () -> Unit
+    onDel: () -> Unit,
+    getPhaseColor: ((String) -> Color)? = null
 ) {
     val ctx = LocalContext.current
     val date = try { LocalDate.parse(ph.dateIso) } catch (e: Exception) { LocalDate.now() }
     
-    val phaseColor = when {
+    val phaseColor = getPhaseColor?.invoke(ph.name) ?: when {
         ph.name.contains("Keimling", ignoreCase = true) || ph.name.contains("Sämling", ignoreCase = true) -> MaterialTheme.colorScheme.seedlingPhase
         ph.name.contains("Veg", ignoreCase = true) -> MaterialTheme.colorScheme.vegetativePhase
         ph.name.contains("Blüte", ignoreCase = true) -> MaterialTheme.colorScheme.floweringPhase

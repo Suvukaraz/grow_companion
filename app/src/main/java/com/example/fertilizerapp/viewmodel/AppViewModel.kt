@@ -3,9 +3,11 @@ package com.example.fertilizerapp.viewmodel
 import android.app.Application
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.room.withTransaction
+import com.example.fertilizerapp.data.PhaseColorPreferences
 import com.example.fertilizerapp.data.db.AppBackup
 import com.example.fertilizerapp.data.db.AppDatabase
 import com.example.fertilizerapp.data.model.Fertilizer
@@ -13,8 +15,10 @@ import com.example.fertilizerapp.data.model.ObjectPhase
 import com.example.fertilizerapp.data.model.PlantObject
 import com.example.fertilizerapp.data.model.Recipe
 import com.example.fertilizerapp.data.model.Samen
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
@@ -35,6 +39,25 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     val plantObjects = db.plantObjectDao().getAll().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val objectPhases = db.objectPhaseDao().getAll().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     
+    // Phase Colors State
+    private val phaseColorPrefs = PhaseColorPreferences(application)
+    private val _phaseColors = MutableStateFlow(phaseColorPrefs.getAllColors())
+    val phaseColors: StateFlow<Map<String, Int>> = _phaseColors.asStateFlow()
+
+    fun getPhaseColor(phaseName: String): Color {
+        return PhaseColorPreferences.getColorForPhase(phaseName, _phaseColors.value)
+    }
+
+    fun updatePhaseColor(phaseKey: String, colorInt: Int) {
+        phaseColorPrefs.setColor(phaseKey, colorInt)
+        _phaseColors.value = phaseColorPrefs.getAllColors()
+    }
+
+    fun resetPhaseColors() {
+        phaseColorPrefs.resetToDefaults()
+        _phaseColors.value = phaseColorPrefs.getAllColors()
+    }
+
     // Samen DB State
     private val _rawSeeds = db.samenDao().getAll()
     var seedSortColumn = mutableStateOf("strain")
@@ -103,7 +126,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             recipes = db.recipeDao().getAll().first(),
             plantObjects = db.plantObjectDao().getAll().first(),
             objectPhases = db.objectPhaseDao().getAll().first(),
-            seeds = db.samenDao().getAll().first()
+            seeds = db.samenDao().getAll().first(),
+            phaseColors = _phaseColors.value
         )
         return json.encodeToString(data)
     }
@@ -121,6 +145,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 db.fertilizerDao().insertAll(b.fertilizers); db.recipeDao().insertAll(b.recipes)
                 db.plantObjectDao().insertAll(b.plantObjects); db.objectPhaseDao().insertAll(b.objectPhases)
                 db.samenDao().insertAll(b.seeds)
+            }
+            if (b.phaseColors.isNotEmpty()) {
+                phaseColorPrefs.setAllColors(b.phaseColors)
+                _phaseColors.value = phaseColorPrefs.getAllColors()
             }
             Result.success(b.seeds.size to b.recipes.size)
         } catch (e: Exception) { Result.failure(e) }

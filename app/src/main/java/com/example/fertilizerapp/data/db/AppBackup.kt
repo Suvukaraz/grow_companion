@@ -14,5 +14,6 @@ data class AppBackup(
     val recipes: List<Recipe>,
     val plantObjects: List<PlantObject>,
     val objectPhases: List<ObjectPhase>,
-    val seeds: List<Samen>
+    val seeds: List<Samen>,
+    val phaseColors: Map<String, Int> = emptyMap()
 )

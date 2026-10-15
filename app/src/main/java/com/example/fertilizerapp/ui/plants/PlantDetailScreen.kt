@@ -13,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.fertilizerapp.data.PhaseColorPreferences
 import com.example.fertilizerapp.data.model.ObjectPhase
 import com.example.fertilizerapp.data.model.PlantObject
 import com.example.fertilizerapp.ui.components.SectionHeader
@@ -23,6 +24,7 @@ import java.time.LocalDate
 @Composable
 fun ObjectDetailScreen(viewModel: AppViewModel, obj: PlantObject, onBack: () -> Unit) {
     val allPhases by viewModel.objectPhases.collectAsState()
+    val phaseColors by viewModel.phaseColors.collectAsState()
     var name by remember { mutableStateOf(obj.name) }
     val initial = remember(obj.id) { allPhases.filter { it.objectId == obj.id } }
     val phases = remember { mutableStateListOf<ObjectPhase>().apply { addAll(initial) } }
@@ -114,7 +116,8 @@ fun ObjectDetailScreen(viewModel: AppViewModel, obj: PlantObject, onBack: () -> 
                             val i = phases.indexOfFirst { it.id == ph.id }
                             if (i != -1) phases[i] = up 
                         },
-                        onDel = { phases.removeIf { it.id == ph.id } }
+                        onDel = { phases.removeIf { it.id == ph.id } },
+                        getPhaseColor = { PhaseColorPreferences.getColorForPhase(it, phaseColors) }
                     )
                 }
             }

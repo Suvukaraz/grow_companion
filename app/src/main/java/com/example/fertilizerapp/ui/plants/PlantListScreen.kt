@@ -15,12 +15,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.fertilizerapp.data.PhaseColorPreferences
 import com.example.fertilizerapp.data.model.PlantObject
 import com.example.fertilizerapp.ui.components.EmptyState
-import com.example.fertilizerapp.ui.theme.floweringPhase
-import com.example.fertilizerapp.ui.theme.harvestPhase
-import com.example.fertilizerapp.ui.theme.seedlingPhase
-import com.example.fertilizerapp.ui.theme.vegetativePhase
 import com.example.fertilizerapp.viewmodel.AppViewModel
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
@@ -37,6 +34,7 @@ fun TimeCalculationTab(viewModel: AppViewModel) {
 fun ObjectListScreen(viewModel: AppViewModel, onClick: (PlantObject) -> Unit) {
     val objects by viewModel.plantObjects.collectAsState()
     val phases by viewModel.objectPhases.collectAsState()
+    val phaseColors by viewModel.phaseColors.collectAsState()
     var showAdd by remember { mutableStateOf(false) }
     var toDel by remember { mutableStateOf<PlantObject?>(null) }
 
@@ -100,14 +98,7 @@ fun ObjectListScreen(viewModel: AppViewModel, onClick: (PlantObject) -> Unit) {
                                         Spacer(modifier = Modifier.height(8.dp))
                                         val phaseName = last.second.name
                                         val daysCount = ChronoUnit.DAYS.between(last.first, LocalDate.now())
-                                        
-                                        val phaseColor = when {
-                                            phaseName.contains("Keimling", ignoreCase = true) || phaseName.contains("Sämling", ignoreCase = true) -> MaterialTheme.colorScheme.seedlingPhase
-                                            phaseName.contains("Veg", ignoreCase = true) -> MaterialTheme.colorScheme.vegetativePhase
-                                            phaseName.contains("Blüte", ignoreCase = true) -> MaterialTheme.colorScheme.floweringPhase
-                                            phaseName.contains("Ernte", ignoreCase = true) -> MaterialTheme.colorScheme.harvestPhase
-                                            else -> MaterialTheme.colorScheme.primary
-                                        }
+                                        val phaseColor = PhaseColorPreferences.getColorForPhase(phaseName, phaseColors)
 
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Surface(

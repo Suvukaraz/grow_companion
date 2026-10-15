@@ -55,7 +55,7 @@ fun RecipeEditDialog(viewModel: AppViewModel, recipe: Recipe?, onDismiss: () -> 
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 CenterAlignedTopAppBar(
-                    title = { Text(if (recipe == null) "Neues Rezept" else "Rezept bearbeiten", fontWeight = FontWeight.Bold) },
+                    title = { Text(if (recipe == null) "Neue Nährlösung" else "Nährlösung bearbeiten", fontWeight = FontWeight.Bold) },
                     navigationIcon = {
                         IconButton(onClick = onDismiss) {
                             Icon(Icons.Default.Close, contentDescription = "Schließen")
