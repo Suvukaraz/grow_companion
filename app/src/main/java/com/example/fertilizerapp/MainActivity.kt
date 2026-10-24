@@ -97,41 +97,10 @@ private fun FullFlavorScreen(viewModel: AppViewModel) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Box(
-                        Modifier.fillMaxWidth(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            "Grow Companion",
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.titleLarge
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = { showInfo = true }) {
-                        Icon(
-                            Icons.Default.Info,
-                            contentDescription = "Info",
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { showSettings = true }) {
-                        Icon(
-                            Icons.Default.Settings,
-                            contentDescription = "Einstellungen",
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface
-                )
+            AppTopBar(
+                title = "Grow Companion",
+                onInfo = { showInfo = true },
+                onSettings = { showSettings = true }
             )
         }
     ) { padding ->
@@ -164,8 +133,49 @@ private fun FullFlavorScreen(viewModel: AppViewModel) {
         SettingsDialog(viewModel) { showSettings = false }
     }
     if (showInfo) {
-        InfoDialog(onDismiss = { showInfo = false })
+        InfoDialog(appName = "Grow Companion", onDismiss = { showInfo = false })
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AppTopBar(title: String, onInfo: () -> Unit, onSettings: () -> Unit) {
+    TopAppBar(
+        title = {
+            Box(
+                Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    title,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleLarge
+                )
+            }
+        },
+        navigationIcon = {
+            IconButton(onClick = onInfo) {
+                Icon(
+                    Icons.Default.Info,
+                    contentDescription = "Info",
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        },
+        actions = {
+            IconButton(onClick = onSettings) {
+                Icon(
+                    Icons.Default.Settings,
+                    contentDescription = "Einstellungen",
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            titleContentColor = MaterialTheme.colorScheme.onSurface
+        )
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -177,7 +187,18 @@ private fun TimerFlavorScreen(viewModel: AppViewModel) {
     } else {
         val pagerState = rememberPagerState(pageCount = { timerTabs.size })
         val scope = rememberCoroutineScope()
-        Scaffold { padding ->
+        var showSettings by remember { mutableStateOf(false) }
+        var showInfo by remember { mutableStateOf(false) }
+
+        Scaffold(
+            topBar = {
+                AppTopBar(
+                    title = "Grow Helper",
+                    onInfo = { showInfo = true },
+                    onSettings = { showSettings = true }
+                )
+            }
+        ) { padding ->
             Column(Modifier.fillMaxSize().padding(padding)) {
                 AppTabRow(
                     tabs = timerTabs,
@@ -198,13 +219,20 @@ private fun TimerFlavorScreen(viewModel: AppViewModel) {
                 }
             }
         }
+
+        if (showSettings) {
+            SettingsDialog(viewModel) { showSettings = false }
+        }
+        if (showInfo) {
+            InfoDialog(appName = "Grow Helper", onDismiss = { showInfo = false })
+        }
     }
 }
 
 // --- INFO DIALOG ---
 
 @Composable
-private fun InfoDialog(onDismiss: () -> Unit) {
+private fun InfoDialog(appName: String, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -228,7 +256,7 @@ private fun InfoDialog(onDismiss: () -> Unit) {
                 )
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    "Grow Companion",
+                    appName,
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.primary

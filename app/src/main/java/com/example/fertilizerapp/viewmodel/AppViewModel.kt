@@ -8,7 +8,11 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.room.withTransaction
 import com.example.fertilizerapp.data.PhaseColorPreferences
+import com.example.fertilizerapp.BuildConfig
 import com.example.fertilizerapp.data.db.AppBackup
+import com.example.fertilizerapp.data.db.BackupJson
+import com.example.fertilizerapp.data.db.RestoreResult
+import com.example.fertilizerapp.data.db.decodeBackup
 import com.example.fertilizerapp.data.db.AppDatabase
 import com.example.fertilizerapp.data.model.Fertilizer
 import com.example.fertilizerapp.data.model.ObjectPhase
@@ -25,17 +29,11 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 import java.text.Collator
 import java.util.Locale
 
 class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val db = AppDatabase.getInstance(application)
-    private val json = Json { 
-        prettyPrint = true
-        ignoreUnknownKeys = true
-        coerceInputValues = true
-    }
 
     // German collation: case-insensitive, umlauts sorted with their base letter (Ä next to A)
     private val nameCollator = Collator.getInstance(Locale.GERMAN).apply { strength = Collator.SECONDARY }
@@ -192,22 +190,24 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             objectPhases = db.objectPhaseDao().getAll().first(),
             seeds = db.samenDao().getAll().first(),
             phaseColors = _phaseColors.value,
-            customPhases = _customPhases.value
+            customPhases = _customPhases.value,
+            appType = BuildConfig.FLAVOR
         )
-        return json.encodeToString(data)
+        return BackupJson.encodeToString(data)
     }
 
-    suspend fun restoreFromBackup(jsonStr: String): Result<Pair<Int, Int>> {
+    suspend fun restoreFromBackup(jsonStr: String): Result<RestoreResult> {
         return try {
-            // Support legacy "waterVolumeMl" field by replacing it with "totalVolumeMl" in the raw JSON string
-            val adjustedJson = jsonStr.replace("\"waterVolumeMl\":", "\"totalVolumeMl\":")
-            val b = json.decodeFromString<AppBackup>(adjustedJson)
-            
+            val b = decodeBackup(jsonStr)
+
             if (b.version > 1) return Result.failure(Exception("Version nicht unterstützt"))
             db.withTransaction {
-                db.fertilizerDao().deleteAll(); db.recipeDao().deleteAll()
+                // A Grow Helper backup keeps the existing fertilizers and nutrient solutions
+                if (!b.isPartial) {
+                    db.fertilizerDao().deleteAll(); db.recipeDao().deleteAll()
+                    db.fertilizerDao().insertAll(b.fertilizers); db.recipeDao().insertAll(b.recipes)
+                }
                 db.plantObjectDao().deleteAll(); db.objectPhaseDao().deleteAll(); db.samenDao().deleteAll()
-                db.fertilizerDao().insertAll(b.fertilizers); db.recipeDao().insertAll(b.recipes)
                 db.plantObjectDao().insertAll(b.plantObjects); db.objectPhaseDao().insertAll(b.objectPhases)
                 db.samenDao().insertAll(b.seeds)
             }
@@ -217,7 +217,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             }
             // Backups from older versions have no list: take the custom names used in the restored data
             setCustomPhases(b.customPhases ?: customPhasesFrom(b.objectPhases))
-            Result.success(b.seeds.size to b.recipes.size)
+            Result.success(RestoreResult(seeds = b.seeds.size, recipes = b.recipes.size, partial = b.isPartial))
         } catch (e: Exception) { Result.failure(e) }
     }
 }

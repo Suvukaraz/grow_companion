@@ -8,8 +8,8 @@ Die fertigen APKs findest du unter [Releases](https://github.com/Suvukaraz/grow_
 
 | Variante | Datei | App-ID | Tabs |
 | --- | --- | --- | --- |
-| **Grow Companion** (Full) | `grow_companion_v1.6.apk` | `com.suvukaraz.Grow_Companion` | Dünger, Nährlösungen, Zeiten, SamenDB |
-| **Grow Helper** (Timer) | `grow_helper_v1.6.apk` | `com.suvukaraz.Grow_Helper` | Zeiten, SamenDB |
+| **Grow Companion** (Full) | `grow_companion_v1.6.1.apk` | `com.suvukaraz.Grow_Companion` | Dünger, Nährlösungen, Zeiten, SamenDB |
+| **Grow Helper** (Timer) | `grow_helper_v1.6.1.apk` | `com.suvukaraz.Grow_Helper` | Zeiten, SamenDB |
 
 Beide Varianten lassen sich parallel installieren. Voraussetzung ist Android 8.0 (API 26) oder neuer.
 
@@ -22,7 +22,7 @@ Beide Varianten lassen sich parallel installieren. Voraussetzung ist Android 8.0
 - **Zeiten**: Pflanzen durch ihre Phasen begleiten (Sämling, Wachstum, Blüte, Trocknung oder eigene Phasen), jeweils mit Tageszähler. Die Phase wird aus einer Liste gewählt, und die nächste Phase ist schon vorausgewählt. Die Reihenfolge der Objekte legst du selbst per Drag & Drop fest (am Griff ziehen oder Karte lange drücken).
 - **Eigene Phasen und Phasen-Farben**: In den Einstellungen legst du eigene Phasen an und gibst jeder Phase eine Farbe.
 - **SamenDB**: Samenvorrat mit Anzahl, Auto/Fem, Strain, Breeder, Blütezeit und THC-Gehalt (auch mit Nachkommastellen). Jede Spalte ist sortierbar.
-- **Backup & Wiederherstellung**: Alle Daten inklusive Phasen-Farben und eigener Phasen als JSON-Datei exportieren und wieder importieren.
+- **Backup & Wiederherstellung**: In beiden Varianten unter *Einstellungen* (Zahnrad oben rechts). Alle Daten inklusive Phasen-Farben und eigener Phasen als JSON-Datei exportieren und wieder importieren. Ein Backup aus Grow Helper lässt beim Import in Grow Companion Dünger und Nährlösungen unangetastet.
 - **Hell- und Dunkelmodus**: Die App folgt der Systemeinstellung.
 
 Dezimalzahlen kannst du mit Komma oder Punkt eingeben.

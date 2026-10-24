@@ -25,6 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.example.fertilizerapp.BuildConfig
 import com.example.fertilizerapp.data.PhaseColorPreferences
 import com.example.fertilizerapp.ui.components.SectionHeader
 import com.example.fertilizerapp.viewmodel.AppViewModel
@@ -50,6 +51,7 @@ private val STANDARD_PHASES = listOf(
 fun SettingsDialog(viewModel: AppViewModel, onDismiss: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val isTimer = remember { BuildConfig.FLAVOR == "timer" }
 
     val customPhaseNames by viewModel.customPhases.collectAsState()
 
@@ -237,13 +239,14 @@ fun SettingsDialog(viewModel: AppViewModel, onDismiss: () -> Unit) {
                         )
 
                         Text(
-                            text = "Sichere alle deine Daten (Dünger, Nährlösungen, Samen, Zeiten, Phasenfarben) oder stelle sie wieder her.",
+                            text = if (isTimer) "Sichere deine Daten (Samen, Zeiten, Phasen-Farben, eigene Phasen) oder stelle sie wieder her."
+                                   else "Sichere alle deine Daten (Dünger, Nährlösungen, Samen, Zeiten, Phasen-Farben, eigene Phasen) oder stelle sie wieder her.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
 
                         FilledTonalButton(
-                            onClick = { createLauncher.launch("Hanf_Backup_${LocalDate.now()}.json") },
+                            onClick = { createLauncher.launch("${if (isTimer) "Grow_Helper" else "Grow_Companion"}_Backup_${LocalDate.now()}.json") },
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Icon(Icons.Default.CloudUpload, null, Modifier.size(18.dp))
@@ -323,7 +326,8 @@ fun SettingsDialog(viewModel: AppViewModel, onDismiss: () -> Unit) {
             },
             text = {
                 Text(
-                    "Alle bestehenden Daten werden überschrieben! Fortfahren?",
+                    if (isTimer) "Alle bestehenden Daten werden überschrieben! Fortfahren?"
+                    else "Alle bestehenden Daten werden überschrieben! Bei einem Backup aus Grow Helper bleiben Dünger und Nährlösungen erhalten. Fortfahren?",
                     style = MaterialTheme.typography.bodyMedium
                 )
             },
@@ -332,8 +336,14 @@ fun SettingsDialog(viewModel: AppViewModel, onDismiss: () -> Unit) {
                     onClick = {
                         scope.launch {
                             val res = viewModel.restoreFromBackup(restoreData)
-                            res.getOrNull()?.let { (seeds, recipes) ->
-                                Toast.makeText(context, "Erfolgreich importiert: $seeds Samen, $recipes Nährlösungen", Toast.LENGTH_LONG).show()
+                            res.getOrNull()?.let { r ->
+                                val msg = buildString {
+                                    append("Erfolgreich importiert: ${r.seeds} Samen")
+                                    // Grow Helper shows no nutrient solutions; a partial backup brings none
+                                    if (!isTimer && !r.partial) append(", ${r.recipes} Nährlösungen")
+                                    if (!isTimer && r.partial) append(". Dünger und Nährlösungen wurden beibehalten.")
+                                }
+                                Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                                 onDismiss()
                             } ?: Toast.makeText(context, "Fehler: ${res.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
                             showConfirmRestore = false
