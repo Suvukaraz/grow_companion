@@ -8,8 +8,8 @@ Die fertigen APKs findest du unter [Releases](https://github.com/Suvukaraz/grow_
 
 | Variante | Datei | App-ID | Tabs |
 | --- | --- | --- | --- |
-| **Grow Companion** (Full) | `grow_companion_v….apk` | `com.suvukaraz.Grow_Companion` | Dünger, Nährlösungen, Zeiten, SamenDB |
-| **Grow Helper** (Timer) | `grow_helper_v….apk` | `com.suvukaraz.Grow_Helper` | Zeiten, SamenDB |
+| **Grow Companion** (Full) | `grow_companion_v1.6.apk` | `com.suvukaraz.Grow_Companion` | Dünger, Nährlösungen, Zeiten, SamenDB |
+| **Grow Helper** (Timer) | `grow_helper_v1.6.apk` | `com.suvukaraz.Grow_Helper` | Zeiten, SamenDB |
 
 Beide Varianten lassen sich parallel installieren. Voraussetzung ist Android 8.0 (API 26) oder neuer.
 
