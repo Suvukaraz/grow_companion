@@ -8,8 +8,8 @@ Die fertigen APKs findest du unter [Releases](https://github.com/Suvukaraz/grow_
 
 | Variante | Datei | App-ID | Tabs |
 | --- | --- | --- | --- |
-| **Grow Companion** (Full) | `grow_companion_v1.5.apk` | `com.suvukaraz.Grow_Companion` | Dünger, Nährlösungen, Zeiten, SamenDB |
-| **Grow Helper** (Timer) | `grow_helper_v1.5.apk` | `com.suvukaraz.Grow_Helper` | Zeiten, SamenDB |
+| **Grow Companion** (Full) | `grow_companion_v….apk` | `com.suvukaraz.Grow_Companion` | Dünger, Nährlösungen, Zeiten, SamenDB |
+| **Grow Helper** (Timer) | `grow_helper_v….apk` | `com.suvukaraz.Grow_Helper` | Zeiten, SamenDB |
 
 Beide Varianten lassen sich parallel installieren. Voraussetzung ist Android 8.0 (API 26) oder neuer.
 
@@ -17,9 +17,9 @@ Beide Varianten lassen sich parallel installieren. Voraussetzung ist Android 8.0
 
 ## Funktionen
 
-- **Dünger**: Name, Hersteller, Typ (fest oder flüssig), Dichte und N-P-K-Werte speichern. Ein Tipp kopiert die Werte, langes Drücken öffnet die Bearbeitung.
-- **Nährlösungen**: eigene Rezepte aus mehreren Düngern zusammenstellen. Die App berechnet den N-P-K-Gehalt der Lösung in % (g pro 100 ml) und zusätzlich in mg/L (ppm). Flüssigdünger werden über ihre Dichte von ml in Gramm umgerechnet.
-- **Zeiten**: Pflanzen durch ihre Phasen begleiten (Sämling, Wachstum, Blüte, Trocknung oder eigene Phasen), jeweils mit Tageszähler. Die Phase wird aus einer Liste gewählt, und die nächste Phase ist schon vorausgewählt.
+- **Dünger**: Name, Hersteller, Typ (fest oder flüssig), Dichte und N-P-K-Werte speichern. Die Liste ist automatisch alphabetisch sortiert. Ein Tipp kopiert die Werte, langes Drücken öffnet die Bearbeitung.
+- **Nährlösungen**: eigene Rezepte aus mehreren Düngern zusammenstellen. Die App berechnet den N-P-K-Gehalt der Lösung in % (g pro 100 ml) und zusätzlich in mg/L (ppm). Flüssigdünger werden über ihre Dichte von ml in Gramm umgerechnet. Die Rezepte sind alphabetisch sortiert.
+- **Zeiten**: Pflanzen durch ihre Phasen begleiten (Sämling, Wachstum, Blüte, Trocknung oder eigene Phasen), jeweils mit Tageszähler. Die Phase wird aus einer Liste gewählt, und die nächste Phase ist schon vorausgewählt. Die Reihenfolge der Objekte legst du selbst per Drag & Drop fest (am Griff ziehen oder Karte lange drücken).
 - **Eigene Phasen und Phasen-Farben**: In den Einstellungen legst du eigene Phasen an und gibst jeder Phase eine Farbe.
 - **SamenDB**: Samenvorrat mit Anzahl, Auto/Fem, Strain, Breeder, Blütezeit und THC-Gehalt (auch mit Nachkommastellen). Jede Spalte ist sortierbar.
 - **Backup & Wiederherstellung**: Alle Daten inklusive Phasen-Farben und eigener Phasen als JSON-Datei exportieren und wieder importieren.

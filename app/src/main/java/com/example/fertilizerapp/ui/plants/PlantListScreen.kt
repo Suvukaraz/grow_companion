@@ -1,18 +1,24 @@
 package com.example.fertilizerapp.ui.plants
 
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DragIndicator
 import androidx.compose.material.icons.filled.Yard
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.fertilizerapp.data.PhaseColorPreferences
@@ -66,68 +72,105 @@ fun ObjectListScreen(viewModel: AppViewModel, onClick: (PlantObject) -> Unit) {
             if (objects.isEmpty()) {
                 EmptyState(
                     icon = Icons.Default.Yard,
-                    title = "Keine Pflanzen",
-                    subtitle = "Tippe auf + um eine neue Pflanze anzulegen."
+                    title = "Keine Objekte",
+                    subtitle = "Tippe auf + um ein neues Objekt anzulegen."
                 )
             } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(objects, key = { it.id }) { obj ->
+                // Local copy that follows the finger while dragging; saved on drop
+                var ordered by remember { mutableStateOf(objects) }
+                LaunchedEffect(objects) { ordered = objects }
+
+                val haptic = LocalHapticFeedback.current
+                val listState = rememberLazyListState()
+                val reorderState = rememberReorderableLazyListState(listState) { from, to ->
+                    ordered = ordered.toMutableList().apply { add(to.index, removeAt(from.index)) }
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                }
+
+                LazyColumn(
+                    state = listState,
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(bottom = 88.dp) // keep the last card clear of the FAB
+                ) {
+                    items(ordered, key = { it.id }) { obj ->
                         val ps = phases.filter { it.objectId == obj.id }
-                        val last = ps.mapNotNull { 
-                            try { LocalDate.parse(it.dateIso) to it } 
-                            catch(e: Exception) { null } 
+                        val last = ps.mapNotNull {
+                            try { LocalDate.parse(it.dateIso) to it }
+                            catch(e: Exception) { null }
                         }.maxByOrNull { it.first }
 
-                        ElevatedCard(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .animateItem(fadeInSpec = tween(250), placementSpec = tween(250)),
-                            onClick = { onClick(obj) }
-                        ) {
-                            Row(
-                                Modifier.padding(16.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                        ReorderableItem(reorderState, key = obj.id) { isDragging ->
+                            val elevation by animateDpAsState(if (isDragging) 8.dp else 1.dp, label = "dragElevation")
+                            val dragModifier = Modifier.longPressDraggableHandle(
+                                onDragStarted = { haptic.performHapticFeedback(HapticFeedbackType.LongPress) },
+                                onDragStopped = { viewModel.reorderPlantObjects(ordered) }
+                            )
+                            ElevatedCard(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .then(dragModifier),
+                                elevation = CardDefaults.elevatedCardElevation(defaultElevation = elevation),
+                                onClick = { onClick(obj) }
                             ) {
-                                Column(Modifier.weight(1f)) {
-                                    Text(
-                                        text = obj.name,
-                                        fontWeight = FontWeight.Bold,
-                                        style = MaterialTheme.typography.titleMedium
+                                Row(
+                                    Modifier.padding(start = 4.dp, top = 16.dp, end = 16.dp, bottom = 16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    // Drag handle: drag immediately; long press anywhere on the card works too
+                                    Icon(
+                                        Icons.Default.DragIndicator,
+                                        contentDescription = "Verschieben",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier
+                                            .draggableHandle(
+                                                onDragStarted = { haptic.performHapticFeedback(HapticFeedbackType.LongPress) },
+                                                onDragStopped = { viewModel.reorderPlantObjects(ordered) }
+                                            )
+                                            .padding(8.dp)
+                                            .size(24.dp)
                                     )
-                                    if (last != null) {
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                        val phaseName = last.second.name
-                                        val daysCount = ChronoUnit.DAYS.between(last.first, LocalDate.now())
-                                        val phaseColor = PhaseColorPreferences.getColorForPhase(phaseName, phaseColors)
+                                    Spacer(Modifier.width(4.dp))
+                                    Column(Modifier.weight(1f)) {
+                                        Text(
+                                            text = obj.name,
+                                            fontWeight = FontWeight.Bold,
+                                            style = MaterialTheme.typography.titleMedium
+                                        )
+                                        if (last != null) {
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            val phaseName = last.second.name
+                                            val daysCount = ChronoUnit.DAYS.between(last.first, LocalDate.now())
+                                            val phaseColor = PhaseColorPreferences.getColorForPhase(phaseName, phaseColors)
 
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Surface(
-                                                color = phaseColor,
-                                                shape = MaterialTheme.shapes.small
-                                            ) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Surface(
+                                                    color = phaseColor,
+                                                    shape = MaterialTheme.shapes.small
+                                                ) {
+                                                    Text(
+                                                        text = phaseName,
+                                                        color = Color.White,
+                                                        style = MaterialTheme.typography.labelMedium,
+                                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                                    )
+                                                }
+                                                Spacer(modifier = Modifier.width(8.dp))
                                                 Text(
-                                                    text = phaseName,
-                                                    color = Color.White,
-                                                    style = MaterialTheme.typography.labelMedium,
-                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                                    text = "$daysCount Tage",
+                                                    color = phaseColor,
+                                                    fontWeight = FontWeight.Bold,
+                                                    style = MaterialTheme.typography.bodyMedium
                                                 )
                                             }
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Text(
-                                                text = "$daysCount Tage",
-                                                color = phaseColor,
-                                                fontWeight = FontWeight.Bold,
-                                                style = MaterialTheme.typography.bodyMedium
-                                            )
                                         }
                                     }
-                                }
-                                IconButton(onClick = { toDel = obj }) {
-                                    Icon(
-                                        Icons.Default.Delete,
-                                        contentDescription = "Delete",
-                                        tint = MaterialTheme.colorScheme.error
-                                    )
+                                    IconButton(onClick = { toDel = obj }) {
+                                        Icon(
+                                            Icons.Default.Delete,
+                                            contentDescription = "Löschen",
+                                            tint = MaterialTheme.colorScheme.error
+                                        )
+                                    }
                                 }
                             }
                         }

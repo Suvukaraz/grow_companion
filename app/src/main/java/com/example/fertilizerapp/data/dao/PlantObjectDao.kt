@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface PlantObjectDao {
-    @Query("SELECT * FROM plant_objects")
+    @Query("SELECT * FROM plant_objects ORDER BY sortOrder, name")
     fun getAll(): Flow<List<PlantObject>>
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(o: PlantObject)
@@ -20,6 +20,8 @@ interface PlantObjectDao {
     suspend fun insertAll(list: List<PlantObject>)
     @Update
     suspend fun update(o: PlantObject)
+    @Update
+    suspend fun updateAll(list: List<PlantObject>)
     @Delete
     suspend fun delete(o: PlantObject)
     @Query("DELETE FROM plant_objects")

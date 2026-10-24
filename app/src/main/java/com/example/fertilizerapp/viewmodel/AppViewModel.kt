@@ -26,6 +26,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.text.Collator
+import java.util.Locale
 
 class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val db = AppDatabase.getInstance(application)
@@ -35,8 +37,16 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         coerceInputValues = true
     }
 
-    val fertilizers = db.fertilizerDao().getAll().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-    val recipes = db.recipeDao().getAll().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    // German collation: case-insensitive, umlauts sorted with their base letter (Ä next to A)
+    private val nameCollator = Collator.getInstance(Locale.GERMAN).apply { strength = Collator.SECONDARY }
+
+    val fertilizers = db.fertilizerDao().getAll()
+        .map { list -> list.sortedWith(compareBy(nameCollator) { it.name }) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val recipes = db.recipeDao().getAll()
+        .map { list -> list.sortedWith(compareBy(nameCollator) { it.name }) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    // Ordered by the user's drag & drop arrangement (sortOrder)
     val plantObjects = db.plantObjectDao().getAll().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val objectPhases = db.objectPhaseDao().getAll().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     
@@ -151,7 +161,16 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun addRecipe(r: Recipe) = viewModelScope.launch { db.recipeDao().insert(r) }
     fun updateRecipe(r: Recipe) = viewModelScope.launch { db.recipeDao().update(r) }
     fun removeRecipe(r: Recipe) = viewModelScope.launch { db.recipeDao().delete(r) }
-    fun addPlantObject(o: PlantObject) = viewModelScope.launch { db.plantObjectDao().insert(o) }
+    /** New objects are appended at the end of the user's order. */
+    fun addPlantObject(o: PlantObject) = viewModelScope.launch {
+        val next = (db.plantObjectDao().getAll().first().maxOfOrNull { it.sortOrder } ?: -1) + 1
+        db.plantObjectDao().insert(o.copy(sortOrder = next))
+    }
+
+    /** Persists the order after drag & drop; [ordered] is the full list in its new order. */
+    fun reorderPlantObjects(ordered: List<PlantObject>) = viewModelScope.launch {
+        db.plantObjectDao().updateAll(ordered.mapIndexed { i, o -> o.copy(sortOrder = i) })
+    }
     fun updatePlantObject(o: PlantObject) = viewModelScope.launch { db.plantObjectDao().update(o) }
     fun removePlantObject(o: PlantObject) = viewModelScope.launch {
         db.plantObjectDao().delete(o)

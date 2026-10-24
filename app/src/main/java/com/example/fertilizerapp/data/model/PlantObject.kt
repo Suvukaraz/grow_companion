@@ -8,7 +8,9 @@ import kotlinx.serialization.Serializable
 @Entity(tableName = "plant_objects")
 data class PlantObject(
     @PrimaryKey val id: String = java.util.UUID.randomUUID().toString(),
-    val name: String
+    val name: String,
+    /** Position in the user's drag & drop order (ascending). */
+    val sortOrder: Int = 0
 )
 
 @Serializable
