@@ -22,6 +22,18 @@ class PhaseColorPreferences(context: Context) {
 
         const val DEFAULT_FALLBACK_COLOR = 0xFF73796E.toInt()
 
+        /** Built-in phases, in growing order. */
+        val STANDARD_PHASES = listOf("Sämling", "Wachstum", "Blüte", "Trocknung")
+
+        private const val KEY_CUSTOM_PHASES = "custom_phases"
+
+        /** True if the name is covered by one of the standard phases (same keywords as the color matching). */
+        fun isStandardPhase(phaseName: String): Boolean {
+            val norm = phaseName.lowercase().trim()
+            return listOf("sämling", "keimling", "veg", "wachstum", "blüte", "blute", "trocknung", "ernte", "curing")
+                .any { norm.contains(it) }
+        }
+
         fun getColorForPhase(phaseName: String, colorMap: Map<String, Int>): Color {
             val norm = phaseName.lowercase().trim()
             if (norm.isEmpty()) return Color(DEFAULT_FALLBACK_COLOR)
@@ -77,6 +89,21 @@ class PhaseColorPreferences(context: Context) {
     }
 
     fun resetToDefaults() {
-        prefs.edit().clear().apply()
+        // Only colors; the list of custom phases stays
+        val editor = prefs.edit()
+        prefs.all.keys.filter { it.startsWith("color_") }.forEach { editor.remove(it) }
+        editor.apply()
+    }
+
+    fun removeColor(phaseKey: String) {
+        prefs.edit().remove("color_${phaseKey.lowercase().trim()}").apply()
+    }
+
+    /** Null if the list was never saved (used to migrate names typed in older versions). */
+    fun getCustomPhases(): List<String>? =
+        prefs.getString(KEY_CUSTOM_PHASES, null)?.split('\n')?.filter { it.isNotBlank() }
+
+    fun setCustomPhases(names: List<String>) {
+        prefs.edit().putString(KEY_CUSTOM_PHASES, names.joinToString("\n")).apply()
     }
 }

@@ -20,11 +20,11 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.fertilizerapp"
+        applicationId = "com.suvukaraz.Grow_Companion"
         minSdk = 26
         targetSdk = 36
-        versionCode = 5
-        versionName = "1.2.5"
+        versionCode = 6
+        versionName = "1.5.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -44,7 +44,7 @@ android {
         release {
             signingConfig = signingConfigs.findByName("release")
             optimization {
-                enable = false
+                enable = true // R8: makes Compose noticeably faster in release builds
             }
         }
     }
@@ -62,12 +62,12 @@ android {
     productFlavors {
         create("full") {
             dimension = "appType"
-            applicationId = "com.example.fertilizerapp"
+            applicationId = "com.suvukaraz.Grow_Companion"
             versionNameSuffix = "-full"
         }
         create("timer") {
             dimension = "appType"
-            applicationId = "com.example.fertilizerapp.timer"
+            applicationId = "com.suvukaraz.Grow_Helper"
             versionNameSuffix = "-timer"
             resValue("string", "app_name", "Grow Helper")
         }
@@ -85,7 +85,6 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
-    implementation(libs.gson)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)

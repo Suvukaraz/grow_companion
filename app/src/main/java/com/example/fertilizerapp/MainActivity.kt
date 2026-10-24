@@ -7,8 +7,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -19,14 +17,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.fertilizerapp.ui.components.AppTabRow
+import com.example.fertilizerapp.ui.components.TabItem
 import com.example.fertilizerapp.ui.fertilizer.FertilizerTab
 import com.example.fertilizerapp.ui.plants.TimeCalculationTab
 import com.example.fertilizerapp.ui.recipe.RecipeTab
@@ -43,8 +40,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.light(AndroidColor.TRANSPARENT, AndroidColor.TRANSPARENT),
-            navigationBarStyle = SystemBarStyle.light(AndroidColor.TRANSPARENT, AndroidColor.TRANSPARENT)
+            // auto: dark icons in light mode, light icons in dark mode
+            statusBarStyle = SystemBarStyle.auto(AndroidColor.TRANSPARENT, AndroidColor.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.auto(AndroidColor.TRANSPARENT, AndroidColor.TRANSPARENT)
         )
         setContent {
             FertilizerAppTheme(dynamicColor = false) {
@@ -60,11 +58,6 @@ class MainActivity : ComponentActivity() {
 }
 
 // --- TAB DEFINITION ---
-
-private data class TabItem(
-    val title: String,
-    val icon: ImageVector
-)
 
 private val fullTabs = listOf(
     TabItem("Dünger", Icons.Default.Eco),
@@ -143,54 +136,17 @@ private fun FullFlavorScreen(viewModel: AppViewModel) {
         }
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            // Styled Tab Row - Changed to PrimaryTabRow for full width
-            PrimaryTabRow(
-                selectedTabIndex = pagerState.currentPage,
-                containerColor = MaterialTheme.colorScheme.surface,
-                contentColor = MaterialTheme.colorScheme.primary,
-                divider = {
-                    HorizontalDivider(
-                        thickness = 0.5.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant
-                    )
-                }
-            ) {
-                fullTabs.forEachIndexed { index, tab ->
-                    val selected = pagerState.currentPage == index
-                    val animatedColor by animateColorAsState(
-                        targetValue = if (selected) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                        animationSpec = tween(300),
-                        label = "tabColor"
-                    )
-                    Tab(
-                        selected = selected,
-                        onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
-                        text = {
-                            Text(
-                                text = tab.title,
-                                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                                color = animatedColor,
-                                maxLines = 1,
-                                softWrap = false,
-                                overflow = TextOverflow.Ellipsis,
-                                style = MaterialTheme.typography.labelSmall
-                            )
-                        },
-                        icon = {
-                            Icon(
-                                imageVector = tab.icon,
-                                contentDescription = tab.title,
-                                tint = animatedColor,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    )
-                }
-            }
+            AppTabRow(
+                tabs = fullTabs,
+                selectedIndex = pagerState.currentPage,
+                scrollPosition = { pagerState.currentPage + pagerState.currentPageOffsetFraction },
+                onSelect = { scope.launch { pagerState.animateScrollToPage(it) } }
+            )
 
             HorizontalPager(
                 state = pagerState,
+                // Keep all tabs composed so swiping never has to build a page mid-animation
+                beyondViewportPageCount = pagerState.pageCount - 1,
                 modifier = Modifier.weight(1f)
             ) { page ->
                 when (page) {
@@ -223,37 +179,16 @@ private fun TimerFlavorScreen(viewModel: AppViewModel) {
         val scope = rememberCoroutineScope()
         Scaffold { padding ->
             Column(Modifier.fillMaxSize().padding(padding)) {
-                PrimaryTabRow(
-                    selectedTabIndex = pagerState.currentPage,
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    contentColor = MaterialTheme.colorScheme.primary
-                ) {
-                    timerTabs.forEachIndexed { index, tab ->
-                        val selected = pagerState.currentPage == index
-                        Tab(
-                            selected = selected,
-                            onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
-                            text = {
-                                Text(
-                                    text = tab.title,
-                                    maxLines = 1,
-                                    softWrap = false,
-                                    overflow = TextOverflow.Ellipsis,
-                                    style = MaterialTheme.typography.labelSmall
-                                )
-                            },
-                            icon = {
-                                Icon(
-                                    imageVector = tab.icon,
-                                    contentDescription = tab.title,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        )
-                    }
-                }
+                AppTabRow(
+                    tabs = timerTabs,
+                    selectedIndex = pagerState.currentPage,
+                    scrollPosition = { pagerState.currentPage + pagerState.currentPageOffsetFraction },
+                    onSelect = { scope.launch { pagerState.animateScrollToPage(it) } }
+                )
                 HorizontalPager(
                     state = pagerState,
+                    // Keep all tabs composed so swiping never has to build a page mid-animation
+                    beyondViewportPageCount = pagerState.pageCount - 1,
                     modifier = Modifier.weight(1f)
                 ) { page ->
                     when (page) {
@@ -297,6 +232,12 @@ private fun InfoDialog(onDismiss: () -> Unit) {
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    // VERSION_NAME carries the flavor suffix ("1.5.0-full")
+                    "Version ${BuildConfig.VERSION_NAME.substringBefore('-')}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(

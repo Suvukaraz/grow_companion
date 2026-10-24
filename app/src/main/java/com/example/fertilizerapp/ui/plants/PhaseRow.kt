@@ -3,13 +3,15 @@ package com.example.fertilizerapp.ui.plants
 import android.app.DatePickerDialog
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -27,7 +29,7 @@ import java.time.temporal.ChronoUnit
 @Composable
 fun PhaseRow(
     ph: ObjectPhase,
-    allNames: List<String>,
+    options: List<String>,
     onUp: (ObjectPhase) -> Unit,
     onDel: () -> Unit,
     getPhaseColor: ((String) -> Color)? = null
@@ -47,35 +49,46 @@ fun PhaseRow(
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 var exp by remember { mutableStateOf(false) }
-                
-                Box(Modifier.weight(1f)) {
+                // A name from an older version or a deleted custom phase stays selectable for this entry
+                val choices = if (ph.name.isNotBlank() && options.none { it.equals(ph.name, ignoreCase = true) }) {
+                    listOf(ph.name) + options
+                } else options
+
+                ExposedDropdownMenuBox(
+                    expanded = exp,
+                    onExpandedChange = { exp = it },
+                    modifier = Modifier.weight(1f)
+                ) {
                     OutlinedTextField(
                         value = ph.name,
-                        onValueChange = { onUp(ph.copy(name = it)) },
+                        onValueChange = {},
+                        readOnly = true,
                         label = { Text("Phase") },
-                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Phase wählen") },
+                        modifier = Modifier
+                            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                            .fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = phaseColor,
                             unfocusedBorderColor = phaseColor.copy(alpha = 0.5f)
                         ),
-                        trailingIcon = { 
-                            if (allNames.isNotEmpty()) {
-                                IconButton(onClick = { exp = true }) { 
-                                    Icon(Icons.Default.ArrowDropDown, contentDescription = "Dropdown") 
-                                } 
-                            }
-                        }
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(exp) }
                     )
-                    
-                    DropdownMenu(
+
+                    ExposedDropdownMenu(
                         expanded = exp,
                         onDismissRequest = { exp = false }
                     ) {
-                        allNames.forEach { s -> 
+                        choices.forEach { s ->
+                            val color = getPhaseColor?.invoke(s) ?: MaterialTheme.colorScheme.outline
                             DropdownMenuItem(
                                 text = { Text(s) },
-                                onClick = { onUp(ph.copy(name = s)); exp = false }
-                            ) 
+                                leadingIcon = {
+                                    Box(Modifier.size(14.dp).clip(CircleShape).background(color))
+                                },
+                                onClick = { onUp(ph.copy(name = s)); exp = false },
+                                contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                            )
                         }
                     }
                 }

@@ -26,6 +26,8 @@ import com.example.fertilizerapp.data.model.Recipe
 import com.example.fertilizerapp.data.model.RecipeIngredient
 import com.example.fertilizerapp.ui.components.NPKResultBadgeRow
 import com.example.fertilizerapp.ui.components.SectionHeader
+import com.example.fertilizerapp.util.formatCompact
+import com.example.fertilizerapp.util.toDecimalOrNull
 import com.example.fertilizerapp.viewmodel.AppViewModel
 import java.util.UUID
 
@@ -38,12 +40,16 @@ fun RecipeEditDialog(viewModel: AppViewModel, recipe: Recipe?, onDismiss: () -> 
     var totalVolume by remember { mutableStateOf(recipe?.totalVolumeMl?.toString() ?: "") }
     var dilution by remember { mutableStateOf(recipe?.dilutionInstruction ?: "") }
     val tempIngredients = remember { mutableStateListOf<RecipeIngredient>().apply { 
-        recipe?.ingredients?.let { addAll(it) }
+        recipe?.let { addAll(it.withCurrentFertilizers(fertilizers).ingredients) }
     } }
     
     var selectedFert by remember { mutableStateOf<Fertilizer?>(null) }
     var amount by remember { mutableStateOf("") }
     var expanded by remember { mutableStateOf(false) }
+    var showErrors by remember { mutableStateOf(false) }
+    var ingredientError by remember { mutableStateOf<String?>(null) }
+    val nameError = showErrors && recipeName.isBlank()
+    val volumeError = showErrors && (totalVolume.toIntOrNull() ?: 0) <= 0
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -78,12 +84,20 @@ fun RecipeEditDialog(viewModel: AppViewModel, recipe: Recipe?, onDismiss: () -> 
                         value = recipeName,
                         onValueChange = { recipeName = it },
                         label = { Text("Name") },
+                        isError = nameError,
+                        supportingText = if (nameError) {
+                            { Text("Bitte einen Namen eingeben") }
+                        } else null,
                         modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
                         value = totalVolume,
                         onValueChange = { totalVolume = it },
                         label = { Text("Gesamtvolumen (ml)") },
+                        isError = volumeError,
+                        supportingText = if (volumeError) {
+                            { Text("Bitte ein Volumen größer 0 eingeben (ganze ml)") }
+                        } else null,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -120,6 +134,7 @@ fun RecipeEditDialog(viewModel: AppViewModel, recipe: Recipe?, onDismiss: () -> 
                                     text = { Text(f.name) },
                                     onClick = { 
                                         selectedFert = f
+                                        ingredientError = null
                                         expanded = false 
                                     }
                                 )
@@ -134,15 +149,21 @@ fun RecipeEditDialog(viewModel: AppViewModel, recipe: Recipe?, onDismiss: () -> 
                     ) {
                         OutlinedTextField(
                             value = amount,
-                            onValueChange = { amount = it },
-                            label = { Text("Menge") },
+                            onValueChange = { amount = it; ingredientError = null },
+                            label = { Text(if (selectedFert?.type == FertilizerType.LIQUID) "Menge (ml)" else "Menge (g)") },
+                            isError = ingredientError != null,
                             modifier = Modifier.weight(1f),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                         )
                         Button(
                             onClick = {
-                                val a = amount.toDoubleOrNull() ?: 0.0
-                                if (selectedFert != null && a > 0) {
+                                val a = amount.toDecimalOrNull() ?: 0.0
+                                ingredientError = when {
+                                    selectedFert == null -> "Bitte zuerst einen Dünger wählen"
+                                    a <= 0 -> "Bitte eine Menge größer 0 eingeben"
+                                    else -> null
+                                }
+                                if (ingredientError == null) {
                                     tempIngredients.add(RecipeIngredient(selectedFert!!, a))
                                     amount = ""
                                     selectedFert = null
@@ -150,8 +171,11 @@ fun RecipeEditDialog(viewModel: AppViewModel, recipe: Recipe?, onDismiss: () -> 
                             },
                             modifier = Modifier.height(56.dp)
                         ) {
-                            Icon(Icons.Default.Add, contentDescription = null)
+                            Icon(Icons.Default.Add, contentDescription = "Zutat hinzufügen")
                         }
+                    }
+                    ingredientError?.let {
+                        Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                     }
 
                     if (tempIngredients.isNotEmpty()) {
@@ -164,7 +188,7 @@ fun RecipeEditDialog(viewModel: AppViewModel, recipe: Recipe?, onDismiss: () -> 
                                 InputChip(
                                     selected = true,
                                     onClick = { tempIngredients.remove(ingredient) },
-                                    label = { Text("${ingredient.amount}${if (ingredient.fertilizer.type == FertilizerType.LIQUID) "ml" else "g"} - ${ingredient.fertilizer.name}") },
+                                    label = { Text("${ingredient.amount.formatCompact()}${if (ingredient.fertilizer.type == FertilizerType.LIQUID) "ml" else "g"} - ${ingredient.fertilizer.name}") },
                                     trailingIcon = {
                                         Icon(
                                             imageVector = Icons.Default.Close,
@@ -180,7 +204,7 @@ fun RecipeEditDialog(viewModel: AppViewModel, recipe: Recipe?, onDismiss: () -> 
                         val previewRecipe = Recipe(
                             id = "preview",
                             name = "Preview",
-                            totalVolumeMl = totalVolume.toIntOrNull() ?: 1000,
+                            totalVolumeMl = totalVolume.toIntOrNull() ?: 0,
                             dilutionInstruction = "",
                             ingredients = tempIngredients.toList()
                         )
@@ -193,7 +217,7 @@ fun RecipeEditDialog(viewModel: AppViewModel, recipe: Recipe?, onDismiss: () -> 
                         ) {
                             Column {
                                 Text("NPK Vorschau", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                                NPKResultBadgeRow(npkResult = previewRecipe.npkResult)
+                                NPKResultBadgeRow(npk = previewRecipe.calculateNpk())
                             }
                         }
                     }
@@ -207,6 +231,7 @@ fun RecipeEditDialog(viewModel: AppViewModel, recipe: Recipe?, onDismiss: () -> 
                         Button(
                             onClick = {
                                 val v = totalVolume.toIntOrNull() ?: 0
+                                showErrors = true
                                 if (recipeName.isNotBlank() && v > 0) {
                                     val r = Recipe(
                                         id = recipe?.id ?: UUID.randomUUID().toString(),

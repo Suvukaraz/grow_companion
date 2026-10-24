@@ -28,7 +28,9 @@ import androidx.compose.ui.window.DialogProperties
 import com.example.fertilizerapp.data.PhaseColorPreferences
 import com.example.fertilizerapp.ui.components.SectionHeader
 import com.example.fertilizerapp.viewmodel.AppViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 
 private data class PhaseConfigItem(
@@ -49,43 +51,50 @@ fun SettingsDialog(viewModel: AppViewModel, onDismiss: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    val objectPhases by viewModel.objectPhases.collectAsState()
+    val customPhaseNames by viewModel.customPhases.collectAsState()
 
     var activePickerPhase by remember { mutableStateOf<PhaseConfigItem?>(null) }
     var showConfirmRestore by remember { mutableStateOf(false) }
     var restoreData by remember { mutableStateOf("") }
+    var newPhaseName by remember { mutableStateOf("") }
+    var newPhaseError by remember { mutableStateOf(false) }
+    var phaseToDelete by remember { mutableStateOf<String?>(null) }
 
-    // Custom phases from user data that are not standard keywords
-    val customPhases = remember(objectPhases) {
-        objectPhases
-            .map { it.name.trim() }
-            .filter { it.isNotBlank() }
-            .distinct()
-            .filter { name ->
-                val norm = name.lowercase()
-                !norm.contains("sämling") && !norm.contains("keimling") &&
-                !norm.contains("veg") && !norm.contains("wachstum") &&
-                !norm.contains("blüte") && !norm.contains("blute") &&
-                !norm.contains("trocknung") && !norm.contains("ernte")
-            }
-            .map { PhaseConfigItem(it.lowercase(), it) }
+    val customPhases = remember(customPhaseNames) {
+        customPhaseNames.map { PhaseConfigItem(it.lowercase(), it) }
     }
 
     val createLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         uri?.let {
             scope.launch {
-                val json = viewModel.createBackupJson()
-                context.contentResolver.openOutputStream(it)?.use { os -> os.write(json.toByteArray()) }
-                Toast.makeText(context, "Backup exportiert", Toast.LENGTH_SHORT).show()
+                val result = runCatching {
+                    val json = viewModel.createBackupJson()
+                    withContext(Dispatchers.IO) {
+                        context.contentResolver.openOutputStream(it)?.use { os -> os.write(json.toByteArray()) }
+                            ?: error("Datei konnte nicht geöffnet werden")
+                    }
+                }
+                val msg = result.fold({ "Backup exportiert" }, { e -> "Export fehlgeschlagen: ${e.message}" })
+                Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
             }
         }
     }
 
     val openLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let {
-            val json = context.contentResolver.openInputStream(it)?.bufferedReader()?.use { r -> r.readText() } ?: ""
-            restoreData = json
-            showConfirmRestore = true
+            scope.launch {
+                runCatching {
+                    withContext(Dispatchers.IO) {
+                        context.contentResolver.openInputStream(it)?.bufferedReader()?.use { r -> r.readText() }
+                            ?: error("Datei konnte nicht geöffnet werden")
+                    }
+                }.onSuccess { json ->
+                    restoreData = json
+                    showConfirmRestore = true
+                }.onFailure { e ->
+                    Toast.makeText(context, "Import fehlgeschlagen: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
         }
     }
 
@@ -132,7 +141,7 @@ fun SettingsDialog(viewModel: AppViewModel, onDismiss: () -> Unit) {
                         )
 
                         Text(
-                            text = "Passe die Farben der Entwicklungsphasen aus dem Zeiten-Tab an.",
+                            text = "Diese Phasen stehen im Zeiten-Tab zur Auswahl. Tippe auf eine Phase, um ihre Farbe anzupassen.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -163,22 +172,46 @@ fun SettingsDialog(viewModel: AppViewModel, onDismiss: () -> Unit) {
                                     )
                                 }
 
-                                if (customPhases.isNotEmpty()) {
-                                    HorizontalDivider(Modifier.padding(vertical = 4.dp))
-                                    Text(
-                                        text = "Eigene Phasen",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
+                                HorizontalDivider(Modifier.padding(vertical = 4.dp))
+                                Text(
+                                    text = "Eigene Phasen",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
 
-                                    customPhases.forEach { phase ->
-                                        val currentColor = viewModel.getPhaseColor(phase.title)
-                                        PhaseColorRow(
-                                            title = phase.title,
-                                            color = currentColor,
-                                            onClick = { activePickerPhase = phase }
-                                        )
+                                customPhases.forEach { phase ->
+                                    val currentColor = viewModel.getPhaseColor(phase.title)
+                                    PhaseColorRow(
+                                        title = phase.title,
+                                        color = currentColor,
+                                        onClick = { activePickerPhase = phase },
+                                        onDelete = { phaseToDelete = phase.title }
+                                    )
+                                }
+
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    OutlinedTextField(
+                                        value = newPhaseName,
+                                        onValueChange = { newPhaseName = it; newPhaseError = false },
+                                        label = { Text("Neue Phase") },
+                                        singleLine = true,
+                                        isError = newPhaseError,
+                                        supportingText = if (newPhaseError) {
+                                            { Text("Leer oder schon vorhanden") }
+                                        } else null,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    FilledTonalIconButton(
+                                        onClick = {
+                                            if (viewModel.addCustomPhase(newPhaseName)) newPhaseName = ""
+                                            else newPhaseError = true
+                                        }
+                                    ) {
+                                        Icon(Icons.Default.Add, contentDescription = "Phase hinzufügen")
                                     }
                                 }
                             }
@@ -254,6 +287,23 @@ fun SettingsDialog(viewModel: AppViewModel, onDismiss: () -> Unit) {
         )
     }
 
+    phaseToDelete?.let { name ->
+        AlertDialog(
+            onDismissRequest = { phaseToDelete = null },
+            title = { Text("Phase entfernen") },
+            text = { Text("'$name' wird nicht mehr zur Auswahl angeboten. Bereits eingetragene Phasen behalten ihren Namen.") },
+            confirmButton = {
+                TextButton(
+                    onClick = { viewModel.removeCustomPhase(name); phaseToDelete = null },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) { Text("Entfernen") }
+            },
+            dismissButton = {
+                TextButton(onClick = { phaseToDelete = null }) { Text("Abbrechen") }
+            }
+        )
+    }
+
     // Confirm Restore Dialog
     if (showConfirmRestore) {
         AlertDialog(
@@ -282,12 +332,10 @@ fun SettingsDialog(viewModel: AppViewModel, onDismiss: () -> Unit) {
                     onClick = {
                         scope.launch {
                             val res = viewModel.restoreFromBackup(restoreData)
-                            if (res.isSuccess) {
-                                Toast.makeText(context, "Erfolgreich importiert", Toast.LENGTH_LONG).show()
+                            res.getOrNull()?.let { (seeds, recipes) ->
+                                Toast.makeText(context, "Erfolgreich importiert: $seeds Samen, $recipes Nährlösungen", Toast.LENGTH_LONG).show()
                                 onDismiss()
-                            } else {
-                                Toast.makeText(context, "Fehler: ${res.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
-                            }
+                            } ?: Toast.makeText(context, "Fehler: ${res.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
                             showConfirmRestore = false
                         }
                     },
@@ -312,7 +360,8 @@ fun SettingsDialog(viewModel: AppViewModel, onDismiss: () -> Unit) {
 private fun PhaseColorRow(
     title: String,
     color: Color,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onDelete: (() -> Unit)? = null
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -341,11 +390,23 @@ private fun PhaseColorRow(
             )
         }
 
-        Icon(
-            imageVector = Icons.Default.Edit,
-            contentDescription = "Farbe ändern",
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(18.dp)
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Default.Edit,
+                contentDescription = "Farbe ändern",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(18.dp)
+            )
+            if (onDelete != null) {
+                IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Phase entfernen",
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+        }
     }
 }

@@ -22,8 +22,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.fertilizerapp.data.model.Fertilizer
 import com.example.fertilizerapp.data.model.FertilizerType
+import com.example.fertilizerapp.ui.components.ConfirmDeleteDialog
 import com.example.fertilizerapp.ui.components.EmptyState
 import com.example.fertilizerapp.ui.components.NPKBadgeRow
+import com.example.fertilizerapp.util.formatCompact
 import com.example.fertilizerapp.viewmodel.AppViewModel
 import kotlinx.coroutines.launch
 
@@ -33,6 +35,7 @@ fun FertilizerTab(viewModel: AppViewModel) {
     val fertilizers by viewModel.fertilizers.collectAsState()
     var showAdd by remember { mutableStateOf(false) }
     var editFert by remember { mutableStateOf<Fertilizer?>(null) }
+    var toDelete by remember { mutableStateOf<Fertilizer?>(null) }
     
     val clipboard = LocalClipboard.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -81,7 +84,7 @@ fun FertilizerTab(viewModel: AppViewModel) {
                                 .animateItem()
                                 .combinedClickable(
                                     onClick = {
-                                        val copyText = "${f.name} (🧪 N: ${f.n}% | P: ${f.p}% | K: ${f.k}%)"
+                                        val copyText = "${f.name} (🧪 N: ${f.n.formatCompact()}% | P: ${f.p.formatCompact()}% | K: ${f.k.formatCompact()}%)"
                                         scope.launch {
                                             clipboard.setClipEntry(ClipData.newPlainText("Fertilizer Info", copyText).toClipEntry())
                                             snackbarHostState.showSnackbar(
@@ -147,7 +150,7 @@ fun FertilizerTab(viewModel: AppViewModel) {
                                 }
 
                                 IconButton(
-                                    onClick = { viewModel.removeFertilizer(f) },
+                                    onClick = { toDelete = f },
                                     colors = IconButtonDefaults.iconButtonColors(
                                         contentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                                     )
@@ -167,5 +170,13 @@ fun FertilizerTab(viewModel: AppViewModel) {
             showAdd = false
             editFert = null
         }
+    }
+
+    toDelete?.let { f ->
+        ConfirmDeleteDialog(
+            name = f.name,
+            onConfirm = { viewModel.removeFertilizer(f); toDelete = null },
+            onDismiss = { toDelete = null }
+        )
     }
 }

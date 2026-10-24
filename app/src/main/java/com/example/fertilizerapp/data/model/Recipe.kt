@@ -4,6 +4,14 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import kotlinx.serialization.Serializable
 
+/** Nutrient concentration of a solution in % (w/v, i.e. g per 100 ml). */
+data class NpkValues(val n: Double, val p: Double, val k: Double) {
+    // 1 % (w/v) = 10 g/L = 10000 mg/L
+    val nPpm get() = n * 10_000
+    val pPpm get() = p * 10_000
+    val kPpm get() = k * 10_000
+}
+
 @Serializable
 @Entity(tableName = "recipes")
 data class Recipe(
@@ -13,23 +21,35 @@ data class Recipe(
     val dilutionInstruction: String,
     val ingredients: List<RecipeIngredient>
 ) {
-    val npkResult: String
-        get() {
-            if (totalVolumeMl <= 0) return "Fehler: Volumen 0"
-            if (ingredients.isEmpty()) return "Keine Zutaten"
+    /**
+     * Mass of each nutrient (g) divided by the total solution volume (ml).
+     * Liquid fertilizers are dosed in ml, so their mass is ml * density (g/ml);
+     * the label percentages are treated as w/w.
+     */
+    fun calculateNpk(): NpkValues? {
+        if (totalVolumeMl <= 0 || ingredients.isEmpty()) return null
 
-            return try {
-                val totalN = ingredients.sumOf { (it.amount * (if (it.fertilizer.type == FertilizerType.LIQUID) it.fertilizer.density else 1.0) * it.fertilizer.n) / 100.0 }
-                val totalP = ingredients.sumOf { (it.amount * (if (it.fertilizer.type == FertilizerType.LIQUID) it.fertilizer.density else 1.0) * it.fertilizer.p) / 100.0 }
-                val totalK = ingredients.sumOf { (it.amount * (if (it.fertilizer.type == FertilizerType.LIQUID) it.fertilizer.density else 1.0) * it.fertilizer.k) / 100.0 }
-
-                val nPercent = (totalN / totalVolumeMl) * 100.0
-                val pPercent = (totalP / totalVolumeMl) * 100.0
-                val kPercent = (totalK / totalVolumeMl) * 100.0
-
-                String.format(java.util.Locale.ROOT, "N: %.2f%% | P: %.2f%% | K: %.2f%%", nPercent, pPercent, kPercent)
-            } catch (_: Exception) {
-                "Berechnungsfehler"
-            }
+        fun nutrientGrams(percent: (Fertilizer) -> Double) = ingredients.sumOf {
+            val grams = if (it.fertilizer.type == FertilizerType.LIQUID) it.amount * it.fertilizer.density else it.amount
+            grams * percent(it.fertilizer) / 100.0
         }
+
+        return NpkValues(
+            n = nutrientGrams { it.n } / totalVolumeMl * 100.0,
+            p = nutrientGrams { it.p } / totalVolumeMl * 100.0,
+            k = nutrientGrams { it.k } / totalVolumeMl * 100.0
+        )
+    }
+
+    /**
+     * Ingredients store a copy of the fertilizer from the moment they were added.
+     * Replace those copies with the current fertilizer data so later corrections
+     * (NPK, density, type) are reflected. Deleted fertilizers keep their copy.
+     */
+    fun withCurrentFertilizers(current: List<Fertilizer>): Recipe {
+        val byId = current.associateBy { it.id }
+        return copy(ingredients = ingredients.map { ing ->
+            byId[ing.fertilizer.id]?.let { ing.copy(fertilizer = it) } ?: ing
+        })
+    }
 }

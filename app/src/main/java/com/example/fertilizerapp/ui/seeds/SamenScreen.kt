@@ -20,7 +20,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.toClipEntry
 import androidx.compose.ui.text.AnnotatedString
@@ -30,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import com.example.fertilizerapp.data.model.AutoFem
 import com.example.fertilizerapp.data.model.Samen
 import com.example.fertilizerapp.ui.components.EmptyState
+import com.example.fertilizerapp.util.formatCompact
 import com.example.fertilizerapp.viewmodel.AppViewModel
 import kotlinx.coroutines.launch
 
@@ -94,7 +94,7 @@ fun SamenTab(viewModel: AppViewModel) {
                         text = "Gesamt: $totalSeeds",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = "Auto: $totalAuto",
@@ -135,7 +135,7 @@ fun SamenTab(viewModel: AppViewModel) {
                                 .background(bgColor)
                                 .combinedClickable(
                                     onClick = {
-                                        val copyText = "🧬 ${s.strain}\n🌱 ${s.breeder}\n⏳ ${s.zeitTage} Tage | 🔥 ${s.thcWert}% THC"
+                                        val copyText = "🧬 ${s.strain}\n🌱 ${s.breeder}\n⏳ ${s.zeitTage} Tage | 🔥 ${s.thcWert.formatCompact(1)}% THC"
                                         scope.launch {
                                             clipboard.setClipEntry(ClipData.newPlainText("Seed Info", copyText).toClipEntry())
                                             snackbarHostState.showSnackbar(
@@ -230,7 +230,7 @@ fun SamenTab(viewModel: AppViewModel) {
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
-                                        text = "${s.thcWert}%",
+                                        text = "${s.thcWert.formatCompact(1)}%",
                                         color = thcColor,
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.Bold

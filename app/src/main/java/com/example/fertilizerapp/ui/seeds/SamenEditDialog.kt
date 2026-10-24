@@ -16,6 +16,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.fertilizerapp.data.model.AutoFem
 import com.example.fertilizerapp.data.model.Samen
+import com.example.fertilizerapp.util.formatCompact
+import com.example.fertilizerapp.util.toDecimalOrNull
 import com.example.fertilizerapp.viewmodel.AppViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -26,11 +28,12 @@ fun SamenEditDialog(viewModel: AppViewModel, seed: Samen?, onDismiss: () -> Unit
     var strain by remember { mutableStateOf(seed?.strain ?: "") }
     var breeder by remember { mutableStateOf(seed?.breeder ?: "") }
     var zeit by remember { mutableStateOf(seed?.zeitTage?.toString() ?: "") }
-    var thc by remember { mutableStateOf(seed?.thcWert?.toString() ?: "") }
+    var thc by remember { mutableStateOf(seed?.thcWert?.takeIf { it != 0.0 }?.formatCompact(1) ?: "") }
 
     val seeds by viewModel.seeds.collectAsState()
     val allBreeders = remember(seeds) { seeds.map { it.breeder }.distinct().filter { it.isNotBlank() }.sorted() }
     var breederExpanded by remember { mutableStateOf(false) }
+    var showErrors by remember { mutableStateOf(false) }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -94,6 +97,10 @@ fun SamenEditDialog(viewModel: AppViewModel, seed: Samen?, onDismiss: () -> Unit
                         value = strain,
                         onValueChange = { strain = it },
                         label = { Text("Strain") },
+                        isError = showErrors && strain.isBlank(),
+                        supportingText = if (showErrors && strain.isBlank()) {
+                            { Text("Bitte einen Namen eingeben") }
+                        } else null,
                         modifier = Modifier.fillMaxWidth()
                     )
 
@@ -150,7 +157,7 @@ fun SamenEditDialog(viewModel: AppViewModel, seed: Samen?, onDismiss: () -> Unit
                             value = thc,
                             onValueChange = { thc = it },
                             label = { Text("THC %") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -164,6 +171,10 @@ fun SamenEditDialog(viewModel: AppViewModel, seed: Samen?, onDismiss: () -> Unit
                     ) {
                         FilledTonalButton(
                             onClick = {
+                                if (strain.isBlank()) {
+                                    showErrors = true
+                                    return@FilledTonalButton
+                                }
                                 val s = Samen(
                                     id = seed?.id ?: 0,
                                     anzahl = anzahl.toIntOrNull() ?: 0,
@@ -171,7 +182,7 @@ fun SamenEditDialog(viewModel: AppViewModel, seed: Samen?, onDismiss: () -> Unit
                                     strain = strain,
                                     breeder = breeder,
                                     zeitTage = zeit.toIntOrNull() ?: 0,
-                                    thcWert = thc.toIntOrNull() ?: 0
+                                    thcWert = thc.toDecimalOrNull() ?: 0.0
                                 )
                                 if (seed == null) viewModel.addSamen(s) else viewModel.updateSamen(s)
                                 onDismiss()

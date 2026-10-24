@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
@@ -58,6 +59,41 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         _phaseColors.value = phaseColorPrefs.getAllColors()
     }
 
+    // Custom phases (managed in settings, selectable in the Zeiten tab)
+    private val _customPhases = MutableStateFlow(phaseColorPrefs.getCustomPhases() ?: emptyList())
+    val customPhases: StateFlow<List<String>> = _customPhases.asStateFlow()
+
+    /** All phases selectable in the Zeiten tab: standard phases first, then custom ones. */
+    val phaseOptions: StateFlow<List<String>> = _customPhases
+        .map { PhaseColorPreferences.STANDARD_PHASES + it }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, PhaseColorPreferences.STANDARD_PHASES + _customPhases.value)
+
+    /** Returns false if the name is empty or already exists. */
+    fun addCustomPhase(name: String): Boolean {
+        val trimmed = name.trim()
+        val exists = (PhaseColorPreferences.STANDARD_PHASES + _customPhases.value).any { it.equals(trimmed, ignoreCase = true) }
+        if (trimmed.isEmpty() || exists) return false
+        setCustomPhases(_customPhases.value + trimmed)
+        return true
+    }
+
+    /** Existing entries in the Zeiten tab keep their name; it just isn't offered anymore. */
+    fun removeCustomPhase(name: String) {
+        setCustomPhases(_customPhases.value - name)
+        phaseColorPrefs.removeColor(name)
+        _phaseColors.value = phaseColorPrefs.getAllColors()
+    }
+
+    private fun setCustomPhases(names: List<String>) {
+        phaseColorPrefs.setCustomPhases(names)
+        _customPhases.value = names
+    }
+
+    private fun customPhasesFrom(phases: List<ObjectPhase>): List<String> = phases
+        .map { it.name.trim() }
+        .filter { it.isNotBlank() && !PhaseColorPreferences.isStandardPhase(it) }
+        .distinctBy { it.lowercase() }
+
     // Samen DB State
     private val _rawSeeds = db.samenDao().getAll()
     var seedSortColumn = mutableStateOf("strain")
@@ -69,18 +105,27 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         snapshotFlow { seedSortAscending.value }
     ) { list, col, asc ->
         val sorted = when (col) {
-            "anzahl" -> list.sortedWith(compareBy<Samen> { it.anzahl }.thenBy { it.strain })
-            "autoFem" -> list.sortedWith(compareBy<Samen> { it.autoFem }.thenBy { it.strain })
-            "breeder" -> list.sortedWith(compareBy<Samen> { it.breeder }.thenBy { it.strain })
-            "zeit" -> list.sortedWith(compareBy<Samen> { it.zeitTage }.thenBy { it.strain })
-            "thc" -> list.sortedWith(compareBy<Samen> { it.thcWert }.thenBy { it.strain })
-            else -> list.sortedBy { it.strain }
+            "anzahl" -> list.sortedWith(compareBy<Samen> { it.anzahl }.thenBy(String.CASE_INSENSITIVE_ORDER) { it.strain })
+            "autoFem" -> list.sortedWith(compareBy<Samen> { it.autoFem }.thenBy(String.CASE_INSENSITIVE_ORDER) { it.strain })
+            "breeder" -> list.sortedWith(compareBy<Samen, String>(String.CASE_INSENSITIVE_ORDER) { it.breeder }.thenBy(String.CASE_INSENSITIVE_ORDER) { it.strain })
+            "zeit" -> list.sortedWith(compareBy<Samen> { it.zeitTage }.thenBy(String.CASE_INSENSITIVE_ORDER) { it.strain })
+            "thc" -> list.sortedWith(compareBy<Samen> { it.thcWert }.thenBy(String.CASE_INSENSITIVE_ORDER) { it.strain })
+            else -> list.sortedWith(compareBy<Samen, String>(String.CASE_INSENSITIVE_ORDER) { it.strain })
         }
         if (asc) sorted else sorted.reversed()
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
         ensureDefaultData()
+        migrateCustomPhases()
+    }
+
+    // Older versions had free-text phase names; adopt the ones already in use once
+    private fun migrateCustomPhases() {
+        if (phaseColorPrefs.getCustomPhases() != null) return
+        viewModelScope.launch {
+            setCustomPhases(customPhasesFrom(db.objectPhaseDao().getAll().first()))
+        }
     }
 
     private fun ensureDefaultData() {
@@ -127,7 +172,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             plantObjects = db.plantObjectDao().getAll().first(),
             objectPhases = db.objectPhaseDao().getAll().first(),
             seeds = db.samenDao().getAll().first(),
-            phaseColors = _phaseColors.value
+            phaseColors = _phaseColors.value,
+            customPhases = _customPhases.value
         )
         return json.encodeToString(data)
     }
@@ -150,6 +196,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 phaseColorPrefs.setAllColors(b.phaseColors)
                 _phaseColors.value = phaseColorPrefs.getAllColors()
             }
+            // Backups from older versions have no list: take the custom names used in the restored data
+            setCustomPhases(b.customPhases ?: customPhasesFrom(b.objectPhases))
             Result.success(b.seeds.size to b.recipes.size)
         } catch (e: Exception) { Result.failure(e) }
     }

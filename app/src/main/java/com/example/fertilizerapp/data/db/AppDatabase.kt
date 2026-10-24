@@ -61,7 +61,7 @@ class AppTypeConverters {
     }
 }
 
-@Database(entities = [Fertilizer::class, Recipe::class, PlantObject::class, ObjectPhase::class, Samen::class], version = 2, exportSchema = false)
+@Database(entities = [Fertilizer::class, Recipe::class, PlantObject::class, ObjectPhase::class, Samen::class], version = 3, exportSchema = false)
 @TypeConverters(AppTypeConverters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun fertilizerDao(): FertilizerDao
@@ -123,11 +123,34 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // thcWert INTEGER -> REAL (allows e.g. 22.5 %). SQLite can't change a column type, so recreate the table.
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE seeds_new (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        anzahl INTEGER NOT NULL,
+                        autoFem TEXT NOT NULL,
+                        strain TEXT NOT NULL,
+                        breeder TEXT NOT NULL,
+                        zeitTage INTEGER NOT NULL,
+                        thcWert REAL NOT NULL
+                    )
+                """.trimIndent())
+                db.execSQL("""
+                    INSERT INTO seeds_new (id, anzahl, autoFem, strain, breeder, zeitTage, thcWert)
+                    SELECT id, anzahl, autoFem, strain, breeder, zeitTage, CAST(thcWert AS REAL) FROM seeds
+                """.trimIndent())
+                db.execSQL("DROP TABLE seeds")
+                db.execSQL("ALTER TABLE seeds_new RENAME TO seeds")
+            }
+        }
+
         @Volatile private var instance: AppDatabase? = null
         fun getInstance(context: Context): AppDatabase {
             return instance ?: synchronized(this) {
                 instance ?: Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "fertilizer_db")
-                    .addMigrations(MIGRATION_1_2)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                     .build().also { instance = it }
             }
         }

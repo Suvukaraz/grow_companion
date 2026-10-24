@@ -24,3 +24,7 @@ secrets.properties
 
 # Firebase and Google services configuration
 google-services.json
+
+# Signed APK output from Android Studio (Build > Generate Signed APK)
+/app/full/
+/app/timer/

@@ -25,6 +25,7 @@ import java.time.LocalDate
 fun ObjectDetailScreen(viewModel: AppViewModel, obj: PlantObject, onBack: () -> Unit) {
     val allPhases by viewModel.objectPhases.collectAsState()
     val phaseColors by viewModel.phaseColors.collectAsState()
+    val phaseOptions by viewModel.phaseOptions.collectAsState()
     var name by remember { mutableStateOf(obj.name) }
     val initial = remember(obj.id) { allPhases.filter { it.objectId == obj.id } }
     val phases = remember { mutableStateListOf<ObjectPhase>().apply { addAll(initial) } }
@@ -86,10 +87,17 @@ fun ObjectDetailScreen(viewModel: AppViewModel, obj: PlantObject, onBack: () -> 
                 trailing = {
                     FilledTonalButton(
                         onClick = {
+                            // Suggest the phase following the most recent one (e.g. Wachstum -> Blüte)
+                            val latest = phases.maxByOrNull {
+                                try { LocalDate.parse(it.dateIso) } catch (e: Exception) { LocalDate.MIN }
+                            }
+                            val latestIndex = phaseOptions.indexOfFirst { it.equals(latest?.name, ignoreCase = true) }
+                            // No phase yet -> index -1 -> first option; after the last option keep the latest name
+                            val suggested = phaseOptions.getOrNull(latestIndex + 1) ?: latest?.name.orEmpty()
                             phases.add(
                                 ObjectPhase(
                                     objectId = obj.id,
-                                    name = "",
+                                    name = suggested,
                                     dateIso = LocalDate.now().toString()
                                 )
                             )
@@ -111,7 +119,7 @@ fun ObjectDetailScreen(viewModel: AppViewModel, obj: PlantObject, onBack: () -> 
                 ) { ph ->
                     PhaseRow(
                         ph = ph,
-                        allNames = allPhases.map { it.name }.distinct().filter { it.isNotBlank() },
+                        options = phaseOptions,
                         onUp = { up -> 
                             val i = phases.indexOfFirst { it.id == ph.id }
                             if (i != -1) phases[i] = up 

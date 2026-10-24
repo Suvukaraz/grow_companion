@@ -16,5 +16,5 @@ data class Samen(
     val strain: String,
     val breeder: String,
     val zeitTage: Int,
-    val thcWert: Int
+    val thcWert: Double
 )

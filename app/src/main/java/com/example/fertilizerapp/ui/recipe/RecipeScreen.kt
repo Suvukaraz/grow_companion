@@ -23,15 +23,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.fertilizerapp.data.model.FertilizerType
 import com.example.fertilizerapp.data.model.Recipe
+import com.example.fertilizerapp.ui.components.ConfirmDeleteDialog
 import com.example.fertilizerapp.ui.components.EmptyState
 import com.example.fertilizerapp.ui.components.NPKResultBadgeRow
 import com.example.fertilizerapp.ui.components.SectionHeader
+import com.example.fertilizerapp.util.formatCompact
 import com.example.fertilizerapp.viewmodel.AppViewModel
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun RecipeTab(viewModel: AppViewModel) {
-    val recipes by viewModel.recipes.collectAsState()
+    val storedRecipes by viewModel.recipes.collectAsState()
+    val fertilizers by viewModel.fertilizers.collectAsState()
+    val recipes = remember(storedRecipes, fertilizers) { storedRecipes.map { it.withCurrentFertilizers(fertilizers) } }
+    var toDelete by remember { mutableStateOf<Recipe?>(null) }
     var showAdd by remember { mutableStateOf(false) }
     var editRecipe by remember { mutableStateOf<Recipe?>(null) }
 
@@ -93,7 +98,7 @@ fun RecipeTab(viewModel: AppViewModel) {
                                         color = MaterialTheme.colorScheme.onSurface,
                                         modifier = Modifier.weight(1f)
                                     )
-                                    IconButton(onClick = { viewModel.removeRecipe(r) }) {
+                                    IconButton(onClick = { toDelete = r }) {
                                         Icon(
                                             imageVector = Icons.Default.Delete,
                                             contentDescription = "Löschen",
@@ -142,7 +147,7 @@ fun RecipeTab(viewModel: AppViewModel) {
                                                 modifier = Modifier.size(16.dp)
                                             )
                                             Text(
-                                                text = "${ingredient.amount}${if (ingredient.fertilizer.type == FertilizerType.LIQUID) "ml" else "g"} ${ingredient.fertilizer.name}",
+                                                text = "${ingredient.amount.formatCompact()} ${if (ingredient.fertilizer.type == FertilizerType.LIQUID) "ml" else "g"} ${ingredient.fertilizer.name}",
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
@@ -158,7 +163,7 @@ fun RecipeTab(viewModel: AppViewModel) {
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.padding(bottom = 4.dp)
                                     )
-                                    NPKResultBadgeRow(npkResult = r.npkResult)
+                                    NPKResultBadgeRow(npk = r.calculateNpk())
                                 }
 
                                 // Dilution
@@ -200,5 +205,13 @@ fun RecipeTab(viewModel: AppViewModel) {
             showAdd = false
             editRecipe = null
         }
+    }
+
+    toDelete?.let { r ->
+        ConfirmDeleteDialog(
+            name = r.name,
+            onConfirm = { viewModel.removeRecipe(r); toDelete = null },
+            onDismiss = { toDelete = null }
+        )
     }
 }

@@ -16,6 +16,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.fertilizerapp.BuildConfig
 import com.example.fertilizerapp.R
 import kotlinx.coroutines.delay
 
@@ -84,6 +85,12 @@ fun TimerSplashScreen(onFinished: () -> Unit) {
                         style = MaterialTheme.typography.headlineLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onPrimary
+                    )
+                    Text(
+                        // VERSION_NAME carries the flavor suffix ("1.5.0-timer")
+                        "Version ${BuildConfig.VERSION_NAME.substringBefore('-')}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
                     )
                     Spacer(Modifier.height(48.dp))
                     Text(

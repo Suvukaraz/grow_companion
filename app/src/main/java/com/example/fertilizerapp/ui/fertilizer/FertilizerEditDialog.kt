@@ -16,6 +16,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.fertilizerapp.data.model.Fertilizer
 import com.example.fertilizerapp.data.model.FertilizerType
+import com.example.fertilizerapp.util.formatCompact
+import com.example.fertilizerapp.util.toDecimalOrNull
 import com.example.fertilizerapp.viewmodel.AppViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -24,10 +26,11 @@ fun FertilizerEditDialog(viewModel: AppViewModel, fertilizer: Fertilizer?, onDis
     var name by remember { mutableStateOf(fertilizer?.name ?: "") }
     var manufacturer by remember { mutableStateOf(fertilizer?.manufacturer ?: "") }
     var type by remember { mutableStateOf(fertilizer?.type ?: FertilizerType.SOLID) }
-    var density by remember { mutableStateOf(fertilizer?.density?.toString()?.takeIf { it != "1.0" } ?: "") }
-    var n by remember { mutableStateOf(fertilizer?.n?.toString()?.takeIf { it != "0.0" } ?: "") }
-    var p by remember { mutableStateOf(fertilizer?.p?.toString()?.takeIf { it != "0.0" } ?: "") }
-    var k by remember { mutableStateOf(fertilizer?.k?.toString()?.takeIf { it != "0.0" } ?: "") }
+    var density by remember { mutableStateOf(fertilizer?.density?.takeIf { it != 1.0 }?.formatCompact(4) ?: "") }
+    var n by remember { mutableStateOf(fertilizer?.n?.takeIf { it != 0.0 }?.formatCompact(4) ?: "") }
+    var p by remember { mutableStateOf(fertilizer?.p?.takeIf { it != 0.0 }?.formatCompact(4) ?: "") }
+    var k by remember { mutableStateOf(fertilizer?.k?.takeIf { it != 0.0 }?.formatCompact(4) ?: "") }
+    var showErrors by remember { mutableStateOf(false) }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -62,6 +65,10 @@ fun FertilizerEditDialog(viewModel: AppViewModel, fertilizer: Fertilizer?, onDis
                         value = name,
                         onValueChange = { name = it },
                         label = { Text("Name") },
+                        isError = showErrors && name.isBlank(),
+                        supportingText = if (showErrors && name.isBlank()) {
+                            { Text("Bitte einen Namen eingeben") }
+                        } else null,
                         modifier = Modifier.fillMaxWidth()
                     )
 
@@ -96,7 +103,7 @@ fun FertilizerEditDialog(viewModel: AppViewModel, fertilizer: Fertilizer?, onDis
                             onValueChange = { density = it },
                             label = { Text("Dichte (g/ml) - z.B. 1.25") },
                             modifier = Modifier.fillMaxWidth(),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             placeholder = { Text("1.0") },
                             supportingText = { Text("Wird für w/w Angaben benötigt") }
                         )
@@ -108,21 +115,21 @@ fun FertilizerEditDialog(viewModel: AppViewModel, fertilizer: Fertilizer?, onDis
                             onValueChange = { n = it },
                             label = { Text("N %") },
                             modifier = Modifier.weight(1f),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                         )
                         OutlinedTextField(
                             value = p,
                             onValueChange = { p = it },
                             label = { Text("P %") },
                             modifier = Modifier.weight(1f),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                         )
                         OutlinedTextField(
                             value = k,
                             onValueChange = { k = it },
                             label = { Text("K %") },
                             modifier = Modifier.weight(1f),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                         )
                     }
 
@@ -134,16 +141,17 @@ fun FertilizerEditDialog(viewModel: AppViewModel, fertilizer: Fertilizer?, onDis
                     ) {
                         Button(
                             onClick = {
+                                showErrors = true
                                 if (name.isNotBlank()) {
                                     val f = Fertilizer(
                                         id = fertilizer?.id ?: java.util.UUID.randomUUID().toString(),
                                         name = name,
                                         manufacturer = manufacturer,
                                         type = type,
-                                        density = density.toDoubleOrNull() ?: 1.0,
-                                        n = n.toDoubleOrNull() ?: 0.0,
-                                        p = p.toDoubleOrNull() ?: 0.0,
-                                        k = k.toDoubleOrNull() ?: 0.0
+                                        density = density.toDecimalOrNull()?.takeIf { it > 0 } ?: 1.0,
+                                        n = n.toDecimalOrNull() ?: 0.0,
+                                        p = p.toDecimalOrNull() ?: 0.0,
+                                        k = k.toDecimalOrNull() ?: 0.0
                                     )
                                     if (fertilizer == null) viewModel.addFertilizer(f) else viewModel.updateFertilizer(f)
                                     onDismiss()

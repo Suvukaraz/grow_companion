@@ -1,71 +1,88 @@
 # Grow Companion
 
-Grow Companion is a privacy-friendly Android app for organizing fertilizers,
-nutrient solutions (*Nährlösungen*), seeds (*SamenDB*), and plant growth timelines in one place. It is designed for growers who want practical records without relying on an online account or cloud service.
+Grow Companion ist eine datenschutzfreundliche Android-App, mit der du Dünger, Nährlösungen, Samen und die Wachstumsphasen deiner Pflanzen an einem Ort verwaltest. Die App funktioniert komplett offline: kein Konto, keine Cloud, alle Daten bleiben auf deinem Gerät.
 
-## Features
+## Download
 
-- **Fertilizer library (Dünger)** - Store fertilizer names, manufacturers, types (liquid/solid), density, and N-P-K values for quick reference.
-- **Nutrient solution recipes (Nährlösungen 🧪)** - Create and maintain reusable nutrient solution recipes with volume calculations and automatic N-P-K result previews.
-- **Plant timelines (Zeiten)** - Track plants through growth phases (*Sämling*, *Wachstum*, *Blüte*, *Trocknung*, or custom phase names) with elapsed day counters.
-- **Customizable phase colors (Phasen-Farben)** - Easily assign custom colors to your growth phases via the settings menu for a personalized timeline view.
-- **Seed database (SamenDB 🌱)** - Keep a detailed inventory of available seeds with sorting by strain, quantity, breeder, autofem type, growth time, and THC content.
-- **Settings & Backup** - Export and restore all your local data (fertilizers, nutrient solutions, seeds, plant timelines, and phase colors) via local JSON files.
-- **Offline-first storage** - Your data is stored 100% locally on your device.
-- **Timer edition** - A lightweight build flavor focused on plant growth timelines and seed tracking.
+Die fertigen APKs findest du unter [Releases](https://github.com/Suvukaraz/grow_companion/releases/latest):
 
-## Screens and flavors
+| Variante | Datei | App-ID | Tabs |
+| --- | --- | --- | --- |
+| **Grow Companion** (Full) | `grow_companion_v1.5.apk` | `com.suvukaraz.Grow_Companion` | Dünger, Nährlösungen, Zeiten, SamenDB |
+| **Grow Helper** (Timer) | `grow_helper_v1.5.apk` | `com.suvukaraz.Grow_Helper` | Zeiten, SamenDB |
 
-The project provides two product flavors:
+Beide Varianten lassen sich parallel installieren. Voraussetzung ist Android 8.0 (API 26) oder neuer.
 
-| Flavor | Application ID | Includes Tabs |
-| --- | --- | --- |
-| `full` | `com.example.fertilizerapp` | Dünger, Nährlösungen 🧪, Zeiten, SamenDB 🌱 |
-| `timer` | `com.example.fertilizerapp.timer` | Zeiten, SamenDB 🌱 |
+> **Umstieg von Version 1.2.5 oder älter:** Seit Version 1.5.0 haben die Apps neue App-IDs. Android installiert sie deshalb als neue Apps neben der alten Version, und die Daten werden nicht automatisch übernommen. Exportiere vorher in der alten App unter *Einstellungen → Backup exportieren* ein Backup und importiere es in der neuen App.
 
-The app interface contains German labels and texts.
+## Funktionen
 
-## Tech stack
+- **Dünger**: Name, Hersteller, Typ (fest oder flüssig), Dichte und N-P-K-Werte speichern. Ein Tipp kopiert die Werte, langes Drücken öffnet die Bearbeitung.
+- **Nährlösungen**: eigene Rezepte aus mehreren Düngern zusammenstellen. Die App berechnet den N-P-K-Gehalt der Lösung in % (g pro 100 ml) und zusätzlich in mg/L (ppm). Flüssigdünger werden über ihre Dichte von ml in Gramm umgerechnet.
+- **Zeiten**: Pflanzen durch ihre Phasen begleiten (Sämling, Wachstum, Blüte, Trocknung oder eigene Phasen), jeweils mit Tageszähler. Die Phase wird aus einer Liste gewählt, und die nächste Phase ist schon vorausgewählt.
+- **Eigene Phasen und Phasen-Farben**: In den Einstellungen legst du eigene Phasen an und gibst jeder Phase eine Farbe.
+- **SamenDB**: Samenvorrat mit Anzahl, Auto/Fem, Strain, Breeder, Blütezeit und THC-Gehalt (auch mit Nachkommastellen). Jede Spalte ist sortierbar.
+- **Backup & Wiederherstellung**: Alle Daten inklusive Phasen-Farben und eigener Phasen als JSON-Datei exportieren und wieder importieren.
+- **Hell- und Dunkelmodus**: Die App folgt der Systemeinstellung.
 
-- Kotlin
-- Jetpack Compose
-- Material 3
-- Android Room
-- Kotlin Serialization and Gson
-- Gradle Version Catalog
+Dezimalzahlen kannst du mit Komma oder Punkt eingeben.
 
-## Requirements
+## Hinweis zur N-P-K-Berechnung
 
-- Android Studio with Android SDK 36
-- JDK 11 or newer
-- Android 8.0 (API 26) or newer for running the app
+Die Berechnung verwendet die Prozentangaben vom Etikett. Phosphor und Kalium werden auf deutschen Etiketten meist als P₂O₅ und K₂O angegeben. Das Ergebnis bezieht sich dann ebenfalls auf P₂O₅ und K₂O und nicht auf reines P und K.
 
-## Build and run
+## Selbst bauen
 
-Clone the repository, open it in Android Studio, allow Gradle to sync, and run one of the available variants:
+Voraussetzungen:
+
+- Android Studio mit Android SDK 36
+- JDK 11 oder neuer
+
+Repository klonen, in Android Studio öffnen, den Gradle-Sync abwarten und eine Variante bauen:
 
 ```bash
 ./gradlew assembleFullDebug
 ./gradlew assembleTimerDebug
 ```
 
-On Windows, use `gradlew.bat` instead:
+Unter Windows stattdessen `gradlew.bat` verwenden:
 
 ```bat
 gradlew.bat assembleFullDebug
 gradlew.bat assembleTimerDebug
 ```
 
-The generated APKs are written to `app/build/outputs/apk/`.
+Die APKs landen in `app/build/outputs/apk/`.
 
-## Data and privacy
+### Release-Builds signieren
 
-Grow Companion does not require an account or network connection for its core features. All fertilizer, recipe, seed, plant, and phase color data is kept in the app's local database and preferences. Use the in-app backup function before uninstalling the app or changing devices.
+Release-Builds werden mit einem Schlüssel aus der Datei `secrets.properties` im Projektordner signiert. Die Datei wird nicht eingecheckt:
 
-## Project status
+```properties
+storeFile=/pfad/zu/deinem/keystore.jks
+storePassword=...
+keyAlias=...
+keyPassword=...
+```
 
-This is an actively developed personal Android project. The data model, interface, and supported Android/Gradle versions may change as development continues.
+Ohne diese Datei entsteht ein unsigniertes Release-APK.
 
-## License
+## Technik
 
-No license has been selected yet. Until a license is added to this repository, all rights are reserved by the project author.
+- Kotlin und Jetpack Compose mit Material 3
+- Room als lokale Datenbank
+- Kotlin Serialization für das Backup
+- Gradle Version Catalog, Android Gradle Plugin 9 mit KSP
+- R8-Optimierung in Release-Builds
+
+## Datenschutz
+
+Grow Companion braucht weder ein Konto noch eine Internetverbindung. Alle Daten liegen in der lokalen Datenbank und den Einstellungen der App. Mach vor dem Deinstallieren oder einem Gerätewechsel ein Backup.
+
+## Projektstatus
+
+Grow Companion ist ein privates Projekt, das aktiv weiterentwickelt wird. Datenmodell, Oberfläche und unterstützte Android-Versionen können sich ändern.
+
+## Lizenz
+
+Bisher ist keine Lizenz festgelegt. Solange keine Lizenz im Repository liegt, behält sich der Autor alle Rechte vor.
