@@ -249,7 +249,7 @@ private fun InfoDialog(appName: String, onDismiss: () -> Unit) {
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Icon(
-                    painter = painterResource(id = R.drawable.gc_logo),
+                    painter = painterResource(id = R.drawable.app_logo),
                     contentDescription = null,
                     tint = Color.Unspecified,
                     modifier = Modifier.size(128.dp)

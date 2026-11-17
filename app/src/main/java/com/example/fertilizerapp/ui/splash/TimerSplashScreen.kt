@@ -31,7 +31,7 @@ import com.example.fertilizerapp.R
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private const val SPLASH_DURATION_MS = 4000
+private const val SPLASH_DURATION_MS = 3000
 private const val TEXT_DELAY_MS = 400
 private const val FADE_OUT_MS = 400
 
@@ -107,7 +107,7 @@ fun TimerSplashScreen(onFinished: () -> Unit) {
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        painter = painterResource(id = R.drawable.gc_logo),
+                        painter = painterResource(id = R.drawable.app_logo),
                         contentDescription = null,
                         tint = Color.Unspecified,
                         modifier = Modifier
